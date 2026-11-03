@@ -594,7 +594,8 @@ var aiApi = {
     o = o || {};
     var img = o.images ? (Array.isArray(o.images) ? o.images[0] : o.images) : null;
     return (img ? blobToB64(img) : Promise.resolve(null)).then(function(b64){
-      return sb.functions.invoke("dp-ai", { body: { prompt: prompt, image: b64 || undefined, mediaType: img ? (img.type || "image/jpeg") : undefined } });
+      var kind = img ? "tsekk" : o.modelTier === "quick" ? "haal" : "ulevaade";
+      return sb.functions.invoke("dp-ai", { body: { prompt: prompt, kind: kind, image: b64 || undefined, mediaType: img ? (img.type || "image/jpeg") : undefined } });
     }).then(function(res){
       if (res.error){
         var ctx = res.error.context;
@@ -1915,10 +1916,49 @@ setInterval(function(){ if (tab === "today" && activeWorkday()) render(); }, 300
 window.addEventListener("online", flush);
 document.addEventListener("visibilitychange", function(){ if (!document.hidden){ render(); flush(); if (uid && Date.now() - lastPull > 20000) pull(); } });
 
+// ---------- AI kulu jälgimine (tabel dp_ai_usage) ----------
+// Claude Haiku 5.5 hinnakiri USD miljoni tokeni kohta. Täpne arve on Anthropicu konsoolis.
+var AI_PRICE_IN = 0.10, AI_PRICE_OUT = 0.50, AI_CREDIT = 5;
+var aiUse = null, aiUseBusy = false, aiUseAt = 0;
+var AI_KIND = { tsekk: "Tšeki lugemine", haal: "Häälsisestus", ulevaade: "Nädala ülevaade", muu: "Muu" };
+function aiCost(i, o){ return i / 1e6 * AI_PRICE_IN + o / 1e6 * AI_PRICE_OUT; }
+function usd(v){ return "$" + (v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(2)).replace(".", ","); }
+function loadAiUse(force){
+  if (!sb || !uid || aiUseBusy || (!force && aiUse && Date.now() - aiUseAt < 60000)) return;
+  aiUseBusy = true;
+  var d = new Date(); var m0 = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+  sb.from("dp_ai_usage").select("created_at,kind,input_tokens,output_tokens").order("created_at", { ascending: false }).limit(5000).then(function(r){
+    aiUseBusy = false; if (r.error) return;
+    var u = { month: { n: 0, i: 0, o: 0, kinds: {} }, all: { n: 0, i: 0, o: 0 }, last: null };
+    (r.data || []).forEach(function(x){
+      u.all.n++; u.all.i += x.input_tokens; u.all.o += x.output_tokens;
+      if (!u.last) u.last = x;
+      if (x.created_at >= m0){
+        u.month.n++; u.month.i += x.input_tokens; u.month.o += x.output_tokens;
+        var k = u.month.kinds[x.kind] || (u.month.kinds[x.kind] = { n: 0, c: 0 }); k.n++; k.c += aiCost(x.input_tokens, x.output_tokens);
+      }
+    });
+    aiUse = u; aiUseAt = Date.now();
+    var el = $("#ai-use"); if (el) el.innerHTML = aiUseInner();
+  }, function(){ aiUseBusy = false; });
+}
+function aiUseInner(){
+  if (!aiUse) return '<p class="hint" style="margin:0">Laen…</p>';
+  var m = aiUse.month, mc = aiCost(m.i, m.o), tc = aiCost(aiUse.all.i, aiUse.all.o);
+  var rows = Object.keys(m.kinds).map(function(k){ return '<tr><td>' + esc(AI_KIND[k] || k) + '</td><td class="num">' + m.kinds[k].n + " × · " + usd(m.kinds[k].c) + '</td></tr>'; }).join("");
+  return '<div class="rep" style="border:0;padding:0">' +
+    '<div class="final" style="margin-top:0"><div><b class="num">' + usd(mc) + '</b><span>sel kuul (' + m.n + ' päringut)</span></div>' +
+    '<div><b class="num">' + usd(Math.max(0, AI_CREDIT - tc)) + '</b><span>umbes alles ' + usd(AI_CREDIT) + '-st</span></div></div>' +
+    (rows ? '<table>' + rows + '</table>' : '<p class="hint">Sel kuul pole veel AI-päringuid.</p>') +
+    '<p class="hint">Hinnang Claude Haiku 5.5 hinnakirja järgi (' + usd(AI_PRICE_IN) + ' / ' + usd(AI_PRICE_OUT) + ' miljoni sisend- / väljundtokeni kohta). Kokku ' + aiUse.all.n + ' päringut, ' + nf0.format(aiUse.all.i + aiUse.all.o) + ' tokenit. Täpne kulu ja jääk: platform.claude.com.</p>' +
+  '</div>';
+}
 // ---------- Konto ja sisselogimine ----------
 function accountHtml(){
   if (!uid) return "";
-  return '<div class="sec"><h2>Konto</h2><div class="list" style="padding:12px 14px">' +
+  loadAiUse(false);
+  return '<div class="sec"><h2>AI kasutus</h2><div class="list" style="padding:12px 14px" id="ai-use">' + aiUseInner() + '</div></div>' +
+    '<div class="sec"><h2>Konto</h2><div class="list" style="padding:12px 14px">' +
     '<p class="hint" style="margin-top:0">Sisse logitud: <b>' + esc(userEmail || "") + '</b></p>' +
     (needPw ? '<div class="warnbox">Määra parool, et saaksid ka kodukuvalt avatud äpis sisse logida.</div>' : "") +
     '<label class="fld"><span>' + (needPw ? "Uus parool" : "Muuda parooli") + ' (vähemalt 8 märki)</span><input id="a-pw" type="password" autocomplete="new-password"></label>' +
