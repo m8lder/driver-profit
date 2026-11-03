@@ -1,0 +1,2026 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Driver Profit</title>
+<meta name="theme-color" content="#0B4F8A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Driver Profit">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#E2E7EC; --ink:#15202B; --muted:#5A6672; --line:#D2D9E0;
+  --hero:#0B4F8A; --hero-ink:#FFFFFF; --hero-muted:#BFD4E8;
+  --amber:#F2A900; --amber-ink:#241A00; --gain:#1C7548; --cost:#B03A25; --warn-bg:#FFF3D1; --warn-ink:#6B4A00;
+  --focus:#0B4F8A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111922; --surface:#1A2430; --surface2:#25313E; --ink:#E6EBF0; --muted:#98A5B2; --line:#2D3A48;
+    --hero:#123F68; --hero-ink:#FFFFFF; --hero-muted:#A9C3DC;
+    --amber:#F2B321; --amber-ink:#221800; --gain:#4BC08A; --cost:#F0806A; --warn-bg:#3A2F12; --warn-ink:#F1CF7A;
+    --focus:#7DB3E6;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111922; --surface:#1A2430; --surface2:#25313E; --ink:#E6EBF0; --muted:#98A5B2; --line:#2D3A48;
+  --hero:#123F68; --hero-ink:#FFFFFF; --hero-muted:#A9C3DC;
+  --amber:#F2B321; --amber-ink:#221800; --gain:#4BC08A; --cost:#F0806A; --warn-bg:#3A2F12; --warn-ink:#F1CF7A;
+  --focus:#7DB3E6;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.4;
+  -webkit-tap-highlight-color:transparent}
+.num{font-family:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:520px;margin:0 auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom,0px))}
+h1,h2,h3{margin:0;font-weight:600}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;margin:4px 2px 12px}
+.top h1{font-size:1.05rem;font-weight:600}
+.top .date{color:var(--muted);font-size:.95rem}
+.sync{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--gain)}
+.dot.pending{background:var(--amber)} .dot.local{background:var(--muted)}
+
+.hero{background:var(--hero);color:var(--hero-ink);border-radius:16px;padding:16px 18px 18px}
+.hero .state{font-size:.95rem;color:var(--hero-muted)}
+.hero .big{font-size:4.4rem;line-height:1;font-weight:700;margin-top:8px;letter-spacing:-.01em}
+.hero .big small{font-size:1.4rem;font-weight:600;margin-left:6px}
+.hero .cap{color:var(--hero-muted);font-size:.95rem;margin-top:2px}
+.hero .pair{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap}
+.hero .pair b{display:block;font-size:1.7rem;font-weight:600;line-height:1.1}
+.hero .pair span{color:var(--hero-muted);font-size:.85rem}
+.hero .paused{display:inline-block;margin-top:10px;background:var(--amber);color:var(--amber-ink);border-radius:8px;padding:3px 10px;font-weight:600}
+
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:14px;overflow:hidden;margin-top:12px}
+.figs div{background:var(--surface);padding:10px 12px}
+.figs span{display:block;color:var(--muted);font-size:.85rem}
+.figs b{font-size:1.35rem;font-weight:600}
+.figs em{font-style:normal;color:var(--muted);font-size:.8rem;margin-left:4px}
+.note{color:var(--muted);font-size:.88rem;margin:8px 2px 0}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn{border:0;border-radius:14px;padding:14px 12px;min-height:56px;font-size:1.05rem;font-weight:600;cursor:pointer;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);text-align:center}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--amber);color:var(--amber-ink);border-color:transparent}
+.btn.big{grid-column:1/-1;min-height:68px;font-size:1.2rem;width:100%}
+.btn.ghost{background:transparent}
+.btn.danger{background:transparent;color:var(--cost);border-color:var(--line)}
+.btn.small{min-height:40px;padding:8px 12px;font-size:.95rem;border-radius:10px}
+.btn[disabled]{opacity:.45}
+.btn.danger.armed{background:var(--cost);color:#fff;border-color:var(--cost)}
+.full{width:100%}
+
+.sec{margin-top:22px}
+.sec h2{font-size:1rem;font-weight:600;margin:0 2px 8px;color:var(--muted)}
+.list{background:var(--surface);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer}
+.item:first-child{border-top:0}
+.item .l{min-width:0}
+.item .l b{font-weight:600;display:block}
+.item .l span{color:var(--muted);font-size:.88rem}
+.item .r{text-align:right;white-space:nowrap}
+.item .r b{display:block;font-size:1.15rem;font-weight:600}
+.item .r span{color:var(--muted);font-size:.85rem}
+.empty{padding:16px 14px;color:var(--muted)}
+.weekhead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px}
+.weekhead b{font-weight:600}
+button.weekhead{width:100%;background:none;border:0;padding:6px 2px;cursor:pointer;text-align:left;font:inherit;color:inherit;gap:10px}
+svg .ax{font-size:10px;fill:var(--muted);font-family:"Barlow Condensed",sans-serif}
+.rep td .btn.small{min-height:34px;padding:4px 10px;font-size:.9rem}
+.weekhead span{color:var(--muted);font-size:.88rem;text-align:right}
+.tag{display:inline-block;font-size:.78rem;padding:1px 7px;border-radius:6px;background:var(--surface2);color:var(--muted);margin-left:6px;vertical-align:2px}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{background:none;border:0;padding:14px 4px 12px;font-size:.95rem;color:var(--muted);cursor:pointer;font-weight:500}
+nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700;box-shadow:inset 0 3px 0 var(--amber)}
+
+#sheet[hidden]{display:none}
+#sheet{position:fixed;inset:0;z-index:20}
+.scrim{position:absolute;inset:0;background:rgba(5,12,20,.45)}
+.panel{position:absolute;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;background:var(--bg);border-radius:18px 18px 0 0;
+  max-height:92%;overflow:auto;padding:0 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.ph{position:sticky;top:0;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:14px 0 10px;z-index:1}
+.ph h2{font-size:1.2rem}
+.x{background:var(--surface2);border:0;border-radius:50%;width:38px;height:38px;font-size:1rem;cursor:pointer}
+.fld{display:block;margin:12px 0}
+.fld>span{display:block;font-size:.9rem;color:var(--muted);margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;font:inherit;font-size:1.15rem;padding:12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);min-height:52px}
+.fld textarea{min-height:80px;font-size:1rem}
+.fld input.amt{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:1.6rem;font-weight:600}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .fld{margin:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 14px;font-size:.98rem;cursor:pointer;min-height:42px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.line{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px 0}
+.line .fld{margin:8px 0 4px}
+.line .rm{float:right;background:none;border:0;color:var(--cost);cursor:pointer;padding:4px}
+.hint{color:var(--muted);font-size:.9rem;margin:6px 0}
+.calc{font-size:1.05rem;margin:10px 0;min-height:1.4em}
+.warnbox{background:var(--warn-bg);color:var(--warn-ink);border-radius:12px;padding:10px 12px;margin:10px 0}
+.err{color:var(--cost);font-weight:600;min-height:1.2em;margin:6px 0}
+.stack>*+*{margin-top:10px}
+.rep{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.rep .rh{font-size:1.25rem;font-weight:700}
+.rep .rs{color:var(--muted)}
+.rep table{width:100%;border-collapse:collapse;margin-top:10px}
+.rep td{padding:5px 0;vertical-align:top}
+.rep td:last-child{text-align:right;white-space:nowrap}
+.rep tr.tot td{border-top:1px solid var(--line);padding-top:8px;font-weight:700}
+.rep tr.sub td{color:var(--muted);font-size:.88rem;padding-top:0}
+.rep .final{display:flex;gap:18px;margin-top:12px}
+.rep .final b{display:block;font-size:2rem;font-weight:700;line-height:1.1}
+.rep .final span{color:var(--muted);font-size:.85rem}
+.pos{color:var(--gain)} .neg{color:var(--cost)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:12px;font-weight:600;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.toast.undo{display:flex;align-items:center;gap:14px;pointer-events:auto;white-space:nowrap}
+.toast.undo button{background:none;border:0;color:var(--amber);font:inherit;font-weight:700;padding:6px 2px;cursor:pointer;text-decoration:underline}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:12px}
+.goal .gt{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.goal .gt b{font-size:1.5rem;font-weight:700}
+.goal .gt span{color:var(--muted);font-size:.9rem}
+.bar{height:12px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:8px 0 6px}
+.bar i{display:block;height:100%;background:var(--amber);border-radius:6px}
+.bar.done i{background:var(--gain)}
+.goal p{margin:0;color:var(--muted);font-size:.9rem}
+.goal button{background:none;border:0;padding:0;color:var(--focus);font-weight:600;cursor:pointer;font-size:.9rem}
+.rc img{display:block;width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:var(--surface2);margin:8px 0;cursor:zoom-in}
+.rc img.open{max-height:none;cursor:zoom-out}
+.rcbtn{display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.rcbtn input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.rcmsg:empty{display:none}
+.rev h3{font-size:.95rem;font-weight:700;margin:12px 0 2px}
+.rev ul{margin:0;padding-left:20px}
+.rev li{margin:3px 0}
+.rev .rvt{font-size:1.1rem;font-weight:600;margin:12px 0 0}
+.toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+#auth{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px 32px}
+#auth[hidden]{display:none}
+#auth .box{max-width:420px;margin:0 auto}
+#auth h1{font-size:1.6rem;font-weight:700;margin:6px 0 4px}
+#auth .sub{color:var(--muted);margin:0 0 14px}
+.linkbtn{background:none;border:0;padding:8px 0;color:var(--focus);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.okbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav class="tabs" aria-label="Põhimenüü"><div class="in">
+  <button data-tab="today">Täna</button>
+  <button data-tab="history">Ajalugu</button>
+  <button data-tab="car">Auto</button>
+  <button data-tab="settings">Seaded</button>
+</div></nav>
+<div id="sheet" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="auth" hidden></div>
+
+<script id="engine">
+// ===== Driver Profit arvutusmootor (puhas loogika, ei puuduta DOM-i) =====
+var NOW = null;
+function now(){ return NOW != null ? NOW : Date.now(); }
+var HOUR = 3600000, MIN = 60000;
+var DEFAULT_SETTINGS = { fuelPerKm: 0.09, expectedHours: 60, monthGoal: 0, rentTerms: [{ from: "2026-01-01", weekly: 210, perKm: 0.06 }] };
+var S = { workdays: {}, fuel: {}, expenses: {}, events: {}, reviews: {}, settings: null };
+var memo = null;
+
+function pad(n){ return String(n).padStart(2, "0"); }
+function dateKey(ts){ var d = new Date(ts); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function addDays(ts, n){ var d = new Date(ts); d.setDate(d.getDate() + n); return d.getTime(); }
+function mondayOf(ts){ var d = new Date(ts); d.setHours(0, 0, 0, 0); var k = (d.getDay() + 6) % 7; d.setDate(d.getDate() - k); return d.getTime(); }
+function ov(a1, a2, b1, b2){ return Math.max(0, Math.min(a2, b2) - Math.max(a1, b1)); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+function settings(){
+  var s = Object.assign({}, DEFAULT_SETTINGS, S.settings || {});
+  if (!s.rentTerms || !s.rentTerms.length) s.rentTerms = DEFAULT_SETTINGS.rentTerms;
+  return s;
+}
+function termsAt(ts){
+  var key = dateKey(ts);
+  var list = settings().rentTerms.slice().sort(function(a, b){ return a.from < b.from ? -1 : 1; });
+  var t = list[0];
+  list.forEach(function(x){ if (x.from <= key) t = x; });
+  return t;
+}
+function workdaysSorted(){ return Object.values(S.workdays).sort(function(a, b){ return a.s - b.s; }); }
+function activeWorkday(){
+  var a = Object.values(S.workdays).filter(function(w){ return !w.e; }).sort(function(a, b){ return b.s - a.s; });
+  return a[0] || null;
+}
+function wdEnd(w){ return w.e != null ? w.e : now(); }
+function pauseOverlap(w, a, b){
+  var t = 0;
+  (w.pauses || []).forEach(function(p){ t += ov(p.s, p.e != null ? p.e : now(), a, b); });
+  return t;
+}
+// Töötatud aeg (ms) tööpäeva sees, valikuliselt piiratud vahemikuga [a,b), pausid maha arvatud
+function workedMs(w, a, b){
+  if (a == null) a = -Infinity; if (b == null) b = Infinity;
+  var s = w.s, e = wdEnd(w);
+  var lo = Math.max(s, a), hi = Math.min(e, b);
+  if (hi <= lo) return 0;
+  return Math.max(0, (hi - lo) - pauseOverlap(w, lo, hi));
+}
+function periodHours(w, p){ return Math.max(0, (p.e - p.s) - pauseOverlap(w, p.s, p.e)) / HOUR; }
+function periodIncome(p){ return (p.lines || []).reduce(function(a, l){ return a + (+l.amt || 0); }, 0); }
+function dayIncome(w){ return (w.periods || []).reduce(function(a, p){ return a + periodIncome(p); }, 0); }
+function incomeBySource(w){
+  var m = {};
+  (w.periods || []).forEach(function(p){ (p.lines || []).forEach(function(l){ m[l.src] = (m[l.src] || 0) + (+l.amt || 0); }); });
+  return m;
+}
+function weekHours(m){
+  var e = addDays(m, 7);
+  return workdaysSorted().reduce(function(a, w){ return a + workedMs(w, m, e); }, 0) / HOUR;
+}
+function expectedHours(){
+  if (memo && memo.expH != null) return memo.expH;
+  var m0 = mondayOf(now()), hs = [];
+  for (var i = 1; i <= 4; i++){ var h = weekHours(addDays(m0, -7 * i)); if (h > 0) hs.push(h); }
+  var r = hs.length ? hs.reduce(function(a, b){ return a + b; }, 0) / hs.length : settings().expectedHours;
+  if (memo) memo.expH = r;
+  return r;
+}
+// Fikseeritud rendi tunnimäär nädalale, mis algab esmaspäeval m
+function weekRate(m){
+  var key = "r" + m;
+  if (memo && memo[key]) return memo[key];
+  var final = now() >= addDays(m, 7);
+  var weekly = termsAt(m).weekly;
+  var hours = final ? weekHours(m) : expectedHours();
+  var res = { rate: hours > 0 ? weekly / hours : 0, final: final, hours: hours };
+  if (memo) memo[key] = res;
+  return res;
+}
+function fixedRentFor(w){
+  var amt = 0, final = true;
+  var m = mondayOf(w.s), last = mondayOf(wdEnd(w));
+  while (m <= last){
+    var r = weekRate(m);
+    amt += r.rate * workedMs(w, m, addDays(m, 7)) / HOUR;
+    if (!r.final) final = false;
+    m = addDays(m, 7);
+  }
+  return { amt: amt, final: final };
+}
+function knownOdos(w){
+  var s = w.s, e = wdEnd(w), pts = [];
+  Object.values(S.fuel).forEach(function(f){ if (f.odo != null && f.t >= s && f.t <= e) pts.push({ t: f.t, odo: +f.odo }); });
+  (w.periods || []).forEach(function(p){ if (p.odo != null) pts.push({ t: p.e, odo: +p.odo }); });
+  return pts.sort(function(a, b){ return a.t - b.t; });
+}
+function avgKmh(){
+  if (memo && memo.kmh !== undefined) return memo.kmh;
+  var from = now() - 28 * 24 * HOUR, km = 0, h = 0;
+  workdaysSorted().forEach(function(w){
+    if (w.e && w.oe != null && w.os != null && w.s >= from){ km += Math.max(0, w.oe - w.os); h += workedMs(w) / HOUR; }
+  });
+  var r = h > 1 ? km / h : null;
+  if (memo) memo.kmh = r;
+  return r;
+}
+// Päeva km: lõpetatud päeval täpne, käimasoleval viimane teadaolev näit + hinnang
+function dayKm(w){
+  if (w.os == null) return { km: null, est: false };
+  if (w.e && w.oe != null) return { km: Math.max(0, w.oe - w.os), est: false };
+  var pts = knownOdos(w).filter(function(p){ return p.odo >= w.os; });
+  var km = 0, lastT = w.s, est = false;
+  if (pts.length){ var last = pts[pts.length - 1]; km = last.odo - w.os; lastT = last.t; }
+  var remH = workedMs(w, lastT, now()) / HOUR;
+  if (remH > 0.05){
+    var a = avgKmh();
+    if (a != null){ km += a * remH; est = true; }
+    else if (!pts.length) return { km: null, est: false };
+    else est = true;
+  }
+  return { km: km, est: est };
+}
+function expenseMap(){
+  if (memo && memo.exp) return memo.exp;
+  var map = {}, wds = workdaysSorted();
+  Object.values(S.expenses).forEach(function(x){
+    var w = wds.find(function(w){ return x.t >= w.s && x.t <= wdEnd(w); });
+    if (!w){ var k = dateKey(x.t); w = wds.find(function(w){ return dateKey(w.s) === k; }); }
+    if (w){ (map[w.id] = map[w.id] || []).push(x); }
+  });
+  if (memo) memo.exp = map;
+  return map;
+}
+// Täispaak→täispaak: tegelik kütusekulu lõikude kaupa (ainult liitrites mõõdetud kütus)
+function fuelSegments(){
+  if (memo && memo.segs) return memo.segs;
+  var fs = Object.values(S.fuel).filter(function(f){ return f.odo != null && +f.l > 0; }).sort(function(a, b){ return a.odo - b.odo || a.t - b.t; });
+  var segs = [], start = null, l = 0, cost = 0, ok = true;
+  fs.forEach(function(f){
+    var isKg = (f.ft || "Bensiin") === "CNG";
+    if (start){ l += +f.l; cost += +f.sum || 0; if (isKg) ok = false; }
+    if (f.full){
+      if (start && ok && f.odo > start.odo){
+        var km = f.odo - start.odo, lp = l / km * 100;
+        if (km >= 50 && lp >= 2 && lp <= 30) segs.push({ fromT: start.t, toT: f.t, fromOdo: start.odo, toOdo: f.odo, km: km, l: l, cost: cost, lp100: lp, ekm: cost / km });
+      }
+      start = f; l = 0; cost = 0; ok = !isKg;
+    }
+  });
+  if (memo) memo.segs = segs;
+  return segs;
+}
+function recentFuel(){
+  var s = fuelSegments().slice(-3); if (!s.length) return null;
+  var km = 0, l = 0, c = 0; s.forEach(function(x){ km += x.km; l += x.l; c += x.cost; });
+  return { ekm: c / km, lp100: l / km * 100, km: km, n: s.length };
+}
+function fuelRateAt(ts){
+  var segs = fuelSegments();
+  for (var i = 0; i < segs.length; i++) if (ts >= segs[i].fromT && ts <= segs[i].toT) return { rate: segs[i].ekm, real: true };
+  var r = recentFuel(); if (r) return { rate: r.ekm, real: true };
+  return { rate: settings().fuelPerKm, real: false };
+}
+function calc(w){
+  var h = workedMs(w) / HOUR, inc = dayIncome(w), k = dayKm(w), st = settings(), t = termsAt(w.s);
+  var fr0 = fuelRateAt(w.s), fuel = k.km != null ? k.km * fr0.rate : null;
+  var kmRent = k.km != null ? k.km * t.perKm : null;
+  var fr = fixedRentFor(w);
+  var other = (expenseMap()[w.id] || []).reduce(function(a, x){ return a + (+x.amt || 0); }, 0);
+  var rent = kmRent != null ? kmRent + fr.amt : null;
+  var costs = (fuel != null && rent != null) ? fuel + rent + other : null;
+  var net = costs != null ? inc - costs : null;
+  return {
+    h: h, inc: inc, km: k.km, kmEst: k.est, fuel: fuel, fuelReal: fr0.real, kmRent: kmRent, fixedRent: fr.amt, rentProv: !fr.final,
+    rent: rent, other: other, costs: costs, net: net,
+    gross: h > 0.02 ? inc / h : null,
+    netH: (net != null && h > 0.02) ? net / h : null,
+    netKm: (net != null && k.km > 0) ? net / k.km : null,
+    bySrc: incomeBySource(w)
+  };
+}
+function weekSummary(m){
+  var e = addDays(m, 7), r = { inc: 0, net: 0, h: 0, km: 0, days: 0, prov: false, unknown: false };
+  workdaysSorted().forEach(function(w){
+    if (w.s >= m && w.s < e){
+      var c = calc(w);
+      r.inc += c.inc; r.h += c.h; r.days++;
+      if (c.km != null) r.km += c.km;
+      if (c.net != null) r.net += c.net; else r.unknown = true;
+      if (c.rentProv || c.kmEst || !w.e) r.prov = true;
+    }
+  });
+  return r;
+}
+function rangeDetail(a, b){
+  var r = { inc: 0, h: 0, km: 0, fuel: 0, fixRent: 0, kmRent: 0, other: 0, net: 0, days: 0, unknown: false, prov: false, fuelEst: false, bySrc: {}, best: null, worst: null, liters: 0, fuelPaid: 0 };
+  var linked = {}, em = expenseMap();
+  workdaysSorted().forEach(function(w){
+    if (w.s < a || w.s >= b) return;
+    var c = calc(w); r.days++; r.inc += c.inc; r.h += c.h;
+    if (c.km != null) r.km += c.km;
+    if (c.fuel != null){ r.fuel += c.fuel; if (!c.fuelReal) r.fuelEst = true; }
+    r.fixRent += c.fixedRent; if (c.kmRent != null) r.kmRent += c.kmRent;
+    r.other += c.other;
+    if (c.net != null) r.net += c.net; else r.unknown = true;
+    if (c.rentProv || c.kmEst || !w.e) r.prov = true;
+    Object.keys(c.bySrc).forEach(function(k){ r.bySrc[k] = (r.bySrc[k] || 0) + c.bySrc[k]; });
+    (em[w.id] || []).forEach(function(x){ linked[x.id] = 1; });
+    if (w.e && c.netH != null && c.h >= 1){
+      var d = { id: w.id, s: w.s, netH: c.netH, net: c.net };
+      if (!r.best || d.netH > r.best.netH) r.best = d;
+      if (!r.worst || d.netH < r.worst.netH) r.worst = d;
+    }
+  });
+  Object.values(S.expenses).forEach(function(x){ if (x.t >= a && x.t < b && !linked[x.id]){ r.other += +x.amt || 0; r.net -= +x.amt || 0; } });
+  Object.values(S.fuel).forEach(function(f){ if (f.t >= a && f.t < b && (f.ft || "Bensiin") !== "CNG"){ r.liters += +f.l || 0; r.fuelPaid += +f.sum || 0; } });
+  r.rent = r.fixRent + r.kmRent;
+  r.costs = r.fuel + r.rent + r.other;
+  r.netH = !r.unknown && r.h > 0 ? r.net / r.h : null;
+  r.netKm = !r.unknown && r.km > 0 ? r.net / r.km : null;
+  r.lp100 = r.km > 0 && r.fuel > 0 ? null : null;
+  var segs = fuelSegments().filter(function(x){ return x.toT >= a && x.toT < b; });
+  if (segs.length){ var sk = 0, sl = 0; segs.forEach(function(x){ sk += x.km; sl += x.l; }); r.lp100 = sl / sk * 100; }
+  else { var rf = recentFuel(); if (rf) r.lp100 = rf.lp100; }
+  return r;
+}
+function overlapsOther(w, s, e, exceptId){
+  return (w.periods || []).filter(function(p){ return p.id !== exceptId && ov(s, e, p.s, p.e) > 0; });
+}
+function lastOdo(){
+  var best = null, bt = -1;
+  Object.values(S.workdays).forEach(function(w){
+    if (w.oe != null && wdEnd(w) > bt){ best = w.oe; bt = wdEnd(w); }
+    else if (w.os != null && w.s > bt){ best = w.os; bt = w.s; }
+  });
+  Object.values(S.fuel).forEach(function(f){ if (f.odo != null && f.t > bt){ best = +f.odo; bt = f.t; } });
+  return best;
+}
+</script>
+
+<script id="ui">
+// ===== Kasutajaliides =====
+(function(){
+var $ = function(s, el){ return (el || document).querySelector(s); };
+var $$ = function(s, el){ return Array.from((el || document).querySelectorAll(s)); };
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function uid8(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+var SOURCES = ["Bolt", "Forus", "Uber", "Transfeer", "Muu"];
+var EXP_CATS = ["Parkimine", "Autopesula", "Tolmuimeja", "Klaasipesuvedelik", "Kätepaber / paberrätikud", "Froteerätikud", "Mikrofiiberlapid", "Niisked salvrätikud", "Käte desinfitseerimisvahend", "Muu autokulu"];
+var TAGS = ["❄️ Lumi", "🌧️ Tugev vihm / halb ilm", "🎵 Kontsert", "⚽ Spordiüritus", "🎉 Festival / suurüritus", "🎆 Püha / aastavahetus", "✈️ Lennujaama suur nõudlus", "🚢 Sadama suur nõudlus", "🚦 Erakordne liiklus", "📈 Väga suur nõudlus", "📉 Ebatavaliselt väike nõudlus", "Muu"];
+var WD = ["pühapäev", "esmaspäev", "teisipäev", "kolmapäev", "neljapäev", "reede", "laupäev"];
+var MON = ["jaan", "veebr", "märts", "apr", "mai", "juuni", "juuli", "aug", "sept", "okt", "nov", "dets"];
+var COLS = ["workdays", "fuel", "expenses", "events", "reviews"];
+var nf0 = new Intl.NumberFormat("et-EE", { maximumFractionDigits: 0 });
+var nf2 = new Intl.NumberFormat("et-EE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+var nf3 = new Intl.NumberFormat("et-EE", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+var MONL = ["jaanuar", "veebruar", "märts", "aprill", "mai", "juuni", "juuli", "august", "september", "oktoober", "november", "detsember"];
+var histY = new Date().getFullYear(), histM = new Date().getMonth();
+
+function hm(ts){ var d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+function dm(ts){ var d = new Date(ts); return pad(d.getDate()) + "." + pad(d.getMonth() + 1); }
+function dmy(ts){ var d = new Date(ts); return dm(ts) + "." + d.getFullYear(); }
+function wdName(ts){ return WD[new Date(ts).getDay()]; }
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+function dur(ms){ var m = Math.round(ms / MIN); return Math.floor(m / 60) + " h " + (m % 60) + " min"; }
+function eur(x){ if (x == null || isNaN(x)) return "–"; var r = Math.round(x * 100) / 100; return (Number.isInteger(r) ? nf0.format(r) : nf2.format(r)) + " €"; }
+function eur2(x){ return x == null || isNaN(x) ? "–" : nf2.format(x) + " €"; }
+function perH(x){ return x == null || isNaN(x) ? "–" : nf2.format(x) + " €/h"; }
+function perKm(x){ return x == null || isNaN(x) ? "–" : nf2.format(x) + " €/km"; }
+function kmf(x){ return x == null ? "–" : nf0.format(Math.round(x)) + " km"; }
+function parseNum(v){ if (v == null) return null; v = String(v).replace(/\s/g, "").replace(",", "."); if (v === "") return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
+function tsFrom(hhmm, baseTs){ var p = hhmm.split(":"); var d = new Date(baseTs); d.setHours(+p[0], +p[1], 0, 0); return d.getTime(); }
+function tsInWorkday(w, hhmm){ var t = tsFrom(hhmm, w.s); if (t < w.s - 2 * HOUR) t = addDays(t, 1); return t; }
+function toDTL(ts){ var d = new Date(ts); return dateKey(ts) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+function fromDTL(v){ if (!v) return null; var t = new Date(v).getTime(); return isNaN(t) ? null : t; }
+function nice(ts){ return cap(wdName(ts)) + " " + dm(ts); }
+function rangeLabel(m){ var e = addDays(m, 6), a = new Date(m), b = new Date(e); return a.getDate() + "." + (a.getMonth() === b.getMonth() ? "" : " " + MON[a.getMonth()]) + "–" + b.getDate() + ". " + MON[b.getMonth()]; }
+
+// ---------- Salvestus: kohalik vahemälu + saatmisjärjekord + andmebaas ----------
+var CACHE_KEY = "dp_cache_v1", OUT_KEY = "dp_outbox_v1";
+function lsGet(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
+var cached = lsGet(CACHE_KEY);
+if (cached){ COLS.forEach(function(c){ S[c] = cached[c] || {}; }); S.settings = cached.settings || null; }
+var outbox = lsGet(OUT_KEY) || [];
+var db = null, uid = null, downloads = null, assets = null, mode = "local", lastErr = null, flushing = false, retryT = null;
+var tab = "today";
+
+function persist(){ lsSet(CACHE_KEY, S); lsSet(OUT_KEY, outbox); }
+// ---------- Supabase ----------
+var SB_URL = "https://awraubukftpfevtcsruq.supabase.co", SB_KEY = "sb_publishable_Zjea2xN0xMk2OcAWsjVqGQ_lJNa5UYP", RC_BUCKET = "drivertaxi-receipts", OWNER_KEY = "dp_owner_v1";
+var sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" } }) : null;
+var userEmail = null, pullAfter = false, pulling = false, lastPull = 0, needPw = false;
+function docId(op){ return op.col === "settings" ? "main" : (op.id != null ? String(op.id) : null); }
+function applyOp(op){
+  if (op.col === "settings"){ if (op.data) S.settings = op.data; return; }
+  if (op.data === null) delete S[op.col][op.id]; else S[op.col][op.id] = op.data;
+}
+function put(col, id, data){
+  var op = { col: col, id: id, data: data };
+  applyOp(op);
+  outbox = outbox.filter(function(o){ return !(o.col === col && o.id === id); });
+  outbox.push(op);
+  persist(); render(); flush();
+}
+function del(col, id){ put(col, id, null); }
+function flush(){
+  if (!sb || !uid || flushing){ renderSync(); return; }
+  flushing = true;
+  (function step(){
+    if (!outbox.length){ flushing = false; renderSync(); if (pullAfter){ pullAfter = false; pull(); } return; }
+    var op = outbox[0], id = docId(op);
+    if (!id || (op.col === "settings" && !op.data)){ outbox.shift(); persist(); return step(); }
+    var q = op.data === null
+      ? sb.from("dp_docs").delete().match({ user_id: uid, col: op.col, id: id })
+      : sb.from("dp_docs").upsert({ user_id: uid, col: op.col, id: id, data: op.data }, { onConflict: "user_id,col,id" });
+    q.then(function(res){
+      if (!res.error){ if (outbox[0] === op) outbox.shift(); lastErr = null; persist(); return step(); }
+      flushing = false;
+      var c = String(res.error.code || "");
+      if (/^(22|23)/.test(c)){ lastErr = "Üks kirje jäi salvestamata, sest server ei võtnud seda vastu."; if (outbox[0] === op) outbox.shift(); persist(); renderSync(); return flush(); }
+      if (c === "42501"){ lastErr = "Salvestamiseks logi uuesti sisse."; }
+      renderSync();
+      clearTimeout(retryT); retryT = setTimeout(flush, 15000);
+    }, function(){ flushing = false; renderSync(); clearTimeout(retryT); retryT = setTimeout(flush, 15000); });
+  })();
+}
+function reapply(col){ outbox.forEach(function(o){ if (o.col === col) applyOp(o); }); }
+// Laeb kõik kirjed serverist (lehekülgede kaupa, sest üks päring annab kuni 1000 rida)
+function pull(){
+  if (!sb || !uid || pulling) return;
+  if (outbox.length || flushing){ pullAfter = true; flush(); return; }
+  pulling = true;
+  var all = [], size = 1000;
+  function page(from){
+    return sb.from("dp_docs").select("col,id,data").order("col").order("id").range(from, from + size - 1).then(function(res){
+      if (res.error) throw res.error;
+      all = all.concat(res.data || []);
+      return (res.data || []).length === size ? page(from + size) : all;
+    });
+  }
+  page(0).then(function(rows){
+    pulling = false;
+    if (outbox.length){ pullAfter = true; flush(); return; }
+    var m = {}, st = null;
+    COLS.forEach(function(c){ m[c] = {}; });
+    rows.forEach(function(r){ if (r.col === "settings") st = r.data; else if (m[r.col]) m[r.col][r.id] = r.data; });
+    COLS.forEach(function(c){ S[c] = m[c]; });
+    S.settings = st;
+    lastPull = Date.now(); lastErr = null; persist(); render();
+  }, function(){ pulling = false; renderSync(); });
+}
+// ---------- Failid (CSV, ZIP) ----------
+var downloadsApi = { save: function(o){
+  return new Promise(function(res){
+    var b = o.data instanceof Blob ? o.data : new Blob([o.data], { type: /\.csv$/i.test(o.filename) ? "text/csv;charset=utf-8" : "application/octet-stream" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = o.filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 5000);
+    res();
+  });
+} };
+// ---------- Tšekipildid Supabase Storage'is (privaatne kaust, iga kasutaja oma alamkaust) ----------
+var rcCache = {};
+var assetsApi = {
+  upload: function(b){
+    var ext = /png/.test(b.type) ? "png" : /webp/.test(b.type) ? "webp" : "jpg";
+    var id = uid8() + Math.random().toString(36).slice(2, 6) + "." + ext;
+    return sb.storage.from(RC_BUCKET).upload(uid + "/" + id, b, { contentType: b.type || "image/jpeg", upsert: false }).then(function(r){
+      if (r.error){ var m = String(r.error.message || ""); throw { code: /size|large/i.test(m) ? "too_large" : /mime|type/i.test(m) ? "unsupported_type" : "upload" }; }
+      rcCache[id] = Promise.resolve(b);
+      return { id: id };
+    });
+  },
+  delete: function(id){ delete rcCache[id]; return sb.storage.from(RC_BUCKET).remove([uid + "/" + id]).then(function(){}); }
+};
+function rcBlob(id){
+  if (rcCache[id]) return rcCache[id];
+  var p = sb ? sb.storage.from(RC_BUCKET).download(uid + "/" + id).then(function(r){ if (r.error || !r.data) throw { code: "nofile" }; return r.data; }) : Promise.reject({ code: "nofile" });
+  p.catch(function(){ delete rcCache[id]; });
+  return (rcCache[id] = p);
+}
+function rcHydrate(root){
+  $$("img[data-rcid]", root || document).forEach(function(img){
+    var id = img.getAttribute("data-rcid"); img.removeAttribute("data-rcid");
+    rcBlob(id).then(function(b){ img.src = URL.createObjectURL(b); }, function(){ if (img.onerror) img.onerror(); else img.remove(); });
+  });
+}
+// ---------- AI (Supabase Edge Function dp-ai -> Anthropic) ----------
+function blobToB64(b){ return new Promise(function(res, rej){ var r = new FileReader(); r.onload = function(){ res(String(r.result).split(",")[1]); }; r.onerror = rej; r.readAsDataURL(b); }); }
+var aiApi = {
+  limits: function(){ return Promise.resolve({ images: true }); },
+  json: function(prompt, o){
+    o = o || {};
+    var img = o.images ? (Array.isArray(o.images) ? o.images[0] : o.images) : null;
+    return (img ? blobToB64(img) : Promise.resolve(null)).then(function(b64){
+      return sb.functions.invoke("dp-ai", { body: { prompt: prompt, image: b64 || undefined, mediaType: img ? (img.type || "image/jpeg") : undefined } });
+    }).then(function(res){
+      if (res.error){
+        var ctx = res.error.context;
+        var p = ctx && typeof ctx.json === "function" ? ctx.json().catch(function(){ return {}; }) : Promise.resolve({});
+        return p.then(function(d){
+          var e = d && d.error;
+          throw { code: e === "rate_limited" ? "rate_limited" : e === "no_json" ? "invalid_json" : e === "unauthorized" ? "not_granted" : "upstream" };
+        });
+      }
+      if (!res.data || res.data.result == null) throw { code: "invalid_json" };
+      return res.data.result;
+    });
+  }
+};
+function renderSync(){
+  var el = $("#sync"); if (!el) return;
+  var cls = "dot", txt;
+  if (mode === "local"){ cls += " local"; txt = "Ainult selles seadmes"; }
+  else if (outbox.length){ cls += " pending"; txt = "Ootab saatmist (" + outbox.length + ")"; }
+  else txt = "Salvestatud";
+  el.innerHTML = '<span class="' + cls + '"></span>' + esc(txt);
+}
+
+// ---------- Abifunktsioonid ----------
+var toastT = null;
+var undoPending = null;
+function flushUndo(){ var u = undoPending; undoPending = null; if (u && u.expire) u.expire(); }
+function undoToast(msg, restore, expire){
+  flushUndo();
+  var t = $("#toast"), me = { expire: expire };
+  undoPending = me;
+  t.innerHTML = '<span>' + esc(msg) + '</span><button type="button">Võta tagasi</button>';
+  t.classList.add("on", "undo"); clearTimeout(toastT);
+  $("button", t).onclick = function(){
+    if (undoPending !== me) return;
+    undoPending = null; restore(); t.classList.remove("on", "undo"); clearTimeout(toastT); toast("Taastatud");
+  };
+  toastT = setTimeout(function(){ t.classList.remove("on", "undo"); if (undoPending === me) flushUndo(); }, 8000);
+}
+function toast(msg){ var t = $("#toast"); flushUndo(); t.classList.remove("undo"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, 1800); }
+function openSheet(title, html, mount){
+  var root = $("#sheet");
+  root.innerHTML = '<div class="scrim" data-close></div><div class="panel" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="ph"><h2>' + esc(title) + '</h2><button class="x" data-close aria-label="Sulge">✕</button></div><div class="pb">' + html + '</div></div>';
+  root.hidden = false;
+  $$("[data-close]", root).forEach(function(b){ b.onclick = closeSheet; });
+  if (mount) mount($(".panel", root));
+}
+// Kinnitus kahe vajutusega
+function confirmTap(btn, ask, action){
+  btn.onclick = function(){
+    if (btn.dataset.armed === "1"){ clearTimeout(btn._t); action(); return; }
+    var orig = btn.textContent;
+    btn.dataset.armed = "1"; btn.classList.add("armed"); btn.textContent = ask + " Vajuta uuesti";
+    btn._t = setTimeout(function(){ btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = orig; }, 5000);
+  };
+}
+function closeSheet(){ var r = $("#sheet"); r.hidden = true; r.innerHTML = ""; }
+function setErr(p, msg){ var e = $(".err", p); if (e) e.textContent = msg || ""; }
+function chips(name, options, selected, multi){
+  return '<div class="chips" data-chips="' + name + '"' + (multi ? ' data-multi="1"' : "") + ">" + options.map(function(o){
+    var on = multi ? (selected || []).indexOf(o) >= 0 : selected === o;
+    return '<button type="button" class="chip" aria-pressed="' + on + '" data-v="' + esc(o) + '">' + esc(o) + "</button>";
+  }).join("") + "</div>";
+}
+function wireChips(p, onChange){
+  $$("[data-chips]", p).forEach(function(g){
+    g.addEventListener("click", function(ev){
+      var b = ev.target.closest(".chip"); if (!b) return;
+      if (g.dataset.multi){ b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true"); }
+      else { $$(".chip", g).forEach(function(c){ c.setAttribute("aria-pressed", c === b ? "true" : "false"); }); }
+      if (onChange) onChange();
+    });
+  });
+}
+function chipVal(g){ var b = $('.chip[aria-pressed="true"]', g); return b ? b.dataset.v : null; }
+function chipVals(g){ return $$('.chip[aria-pressed="true"]', g).map(function(b){ return b.dataset.v; }); }
+var FUELS = ["Bensiin", "Diisel", "LPG", "CNG"];
+function fuelType(f){ return (f && f.ft) || "Bensiin"; }
+function fuelUnit(ft){ return ft === "CNG" ? "kg" : "l"; }
+function lastFuel(){ var v = lsGet("dp_lastfuel"); return FUELS.indexOf(v) >= 0 ? v : "Bensiin"; }
+// ---------- Häälega sisestamine ----------
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null, voiceRec = null;
+var EXP_KEYS = [["park", "Parkimine"], ["car wash", "Autopesula"], ["wash", "Autopesula"], ["vacuum", "Tolmuimeja"], ["pesu", "Autopesula"], ["pesula", "Autopesula"], ["tolmuimeja", "Tolmuimeja"], ["klaasipesu", "Klaasipesuvedelik"], ["kätepaber", "Kätepaber / paberrätikud"], ["paberrät", "Kätepaber / paberrätikud"], ["frotee", "Froteerätikud"], ["mikrofiib", "Mikrofiiberlapid"], ["salvrät", "Niisked salvrätikud"], ["desinf", "Käte desinfitseerimisvahend"]];
+var SRC_KEYS = [["bolt", "Bolt"], ["uber", "Uber"], ["forus", "Forus"], ["transfe", "Transfeer"]];
+function vNum(x){ return parseFloat(String(x).replace(",", ".")); }
+function vTime(x){ var m = /(\d{1,2})[:.](\d{2})/.exec(x); return m && +m[1] < 24 && +m[2] < 60 ? pad(+m[1]) + ":" + m[2] : null; }
+// Kohalik tõlgendus: ei kasuta tehisaru, töötab, kui numbrid on numbritena
+function parseLocal(raw){
+  var t = " " + raw.toLowerCase().replace(/€/g, " eur ").replace(/\s+/g, " ") + " ";
+  var out = {}, tm = /(\d{1,2}[:.]\d{2})\s*(?:-|–|kuni|kuni kella)\s*(\d{1,2}[:.]\d{2})/.exec(t);
+  if (tm){ out.s = vTime(tm[1]); out.e = vTime(tm[2]); t = t.replace(tm[0], " "); }
+  var isFuel = /tank|kütus|liitr|bensiin|diisel|\blpg\b|\bcng\b|gaas|fuel|petrol|diesel|liter|litre/.test(t);
+  var srcHits = SRC_KEYS.filter(function(k){ return t.indexOf(k[0]) >= 0; });
+  if (isFuel && !srcHits.length){
+    var f = { kind: "fuel" }, m;
+    if ((m = /(\d+(?:[.,]\d+)?)\s*(?:l\b|liitr|liter|litre|kg\b|kilo)/.exec(t))) f.l = vNum(m[1]);
+    if ((m = /(?:odomeeter|odometer|odo|näit|mileage)\D{0,12}(\d{3,7})/.exec(t)) || (m = /(\d{4,7})\s*(?:km|kilomeetr)/.exec(t))) f.odo = vNum(m[1]);
+    if ((m = /(\d+(?:[.,]\d+)?)\s*eur/.exec(t))) f.sum = vNum(m[1]);
+    if ((m = /(\d+[.,]\d{3})\s*(?:eur\s*)?(?:liitri|\/l|kilo)/.exec(t)) || (m = /hind\D{0,6}(\d+[.,]\d+)/.exec(t))) f.price = vNum(m[1]);
+    if (f.sum == null){ var nums = (t.match(/\d+(?:[.,]\d+)?/g) || []).map(vNum).filter(function(n){ return n !== f.l && n !== f.odo && n !== f.price; }); if (nums.length) f.sum = nums[0]; }
+    if (/\bcng\b|gaas/.test(t)) f.ft = "CNG"; else if (/\blpg\b/.test(t)) f.ft = "LPG"; else if (/diisel|diesel/.test(t)) f.ft = "Diisel"; else if (/bensiin|petrol|95|98/.test(t)) f.ft = "Bensiin";
+    if (/osali|partial/.test(t)) f.full = false; else if (/täis|full/.test(t)) f.full = true;
+    return (f.l != null || f.sum != null) ? f : null;
+  }
+  if (srcHits.length){
+    var lines = [], re = /(bolt|uber|forus|transfe\S*)\D*?(\d+(?:[.,]\d+)?)/g, mm;
+    while ((mm = re.exec(t))){ var k = SRC_KEYS.find(function(x){ return mm[1].indexOf(x[0]) === 0; }); if (k) lines.push({ src: k[1], amt: vNum(mm[2]) }); }
+    if (!lines.length) return null;
+    var od = /(?:odomeeter|odo|näit)\D{0,12}(\d{3,7})/.exec(t);
+    return { kind: "income", lines: lines, s: out.s, e: out.e, odo: od ? vNum(od[1]) : null };
+  }
+  var cat = null; EXP_KEYS.forEach(function(k){ if (!cat && t.indexOf(k[0]) >= 0) cat = k[1]; });
+  var am = /(\d+(?:[.,]\d+)?)/.exec(t);
+  if (cat && am){
+    var x = { kind: "expense", cat: cat, amt: vNum(am[1]) };
+    if (cat === "Parkimine"){ if (/telefon|phone|mobiil|sms/.test(t)) x.phone = true; else if (/kaart|card|sulara|cash/.test(t)) x.phone = false; }
+    var nt = /(lennujaam|airport|sadam|port|terminal|kesklinn|vanalinn)/.exec(t); if (nt) x.note = cap({ airport: "lennujaam", port: "sadam" }[nt[1]] || nt[1]);
+    return x;
+  }
+  return null;
+}
+function parseAI(raw){
+  var prompt = "Sõidujagamise ja transfeerijuht ütles oma tööäppi ühe lause eesti keeles (kõnetuvastusest, võib sisaldada vigu ja numbreid sõnadega). Tõlgenda see ÜHEKS sisestuseks. " +
+    "Vasta AINULT JSON-objektiga. Võimalikud kujud:\n" +
+    "{\"kind\":\"income\",\"lines\":[{\"src\":\"Bolt|Forus|Uber|Transfeer|Muu\",\"amt\":number}],\"s\":\"HH:MM\" või null,\"e\":\"HH:MM\" või null,\"odo\":number või null}\n" +
+    "{\"kind\":\"fuel\",\"l\":number või null,\"sum\":number või null,\"price\":number või null,\"odo\":number või null,\"ft\":\"Bensiin|Diisel|LPG|CNG\" või null,\"full\":true|false|null}\n" +
+    "{\"kind\":\"expense\",\"cat\":\"" + EXP_CATS.join("|") + "\",\"amt\":number,\"phone\":true|false|null,\"note\":string või null}\n" +
+    "{\"kind\":\"unknown\"}\n" +
+    "Summad eurodes. Numbrid kujul 4.5, mitte sõnadena. Ära arva puuduvaid väärtusi, pane null.\n\nLAUSE: " + raw;
+  return sampleFn.json(prompt, { modelTier: "quick", cache: false });
+}
+function applyParsed(o){
+  if (!o || !o.kind || o.kind === "unknown") return "Ei saanud aru. Proovi nt „Bolt 23 eurot“ või „parkimine 4,50 telefoniga“.";
+  if (o.kind === "income"){
+    var w = activeWorkday();
+    if (!w) return "Tulu lisamiseks alusta enne tööpäeva.";
+    var ls = (o.lines || []).filter(function(l){ return SOURCES.indexOf(l.src) >= 0 && numOk(l.amt, 0.1, 2000) != null; });
+    if (!ls.length) return "Summa jäi arusaamatuks. Proovi uuesti.";
+    sheetIncome(w, null, { lines: ls, s: o.s, e: o.e, odo: numOk(o.odo, 1, 9999999) });
+    return null;
+  }
+  if (o.kind === "fuel"){ sheetFuel(null, o); return null; }
+  if (o.kind === "expense"){
+    if (EXP_CATS.indexOf(o.cat) < 0) o.cat = null;
+    sheetExpense(null, o); return null;
+  }
+  return "Ei saanud aru.";
+}
+function sheetVoice(){
+  openSheet("Ütle või kirjuta",
+    '<p class="hint">Näiteks „Bolt 23 eurot“, „Uber 18, Bolt 12“, „parkimine 4,50 telefoniga“ või „tankisin 40 liitrit 72 eurot, odomeeter 125400“. Ütle ainult pargitud autos.</p>' +
+    (SR && !lsGet("dp_micblocked") ? '<button type="button" class="btn primary big" id="v-mic">🎤 Räägi</button>' : "") +
+    '<label class="fld"><span>' + (SR && !lsGet("dp_micblocked") ? "Või kirjuta siia" : "Puuduta siia ja vajuta klaviatuuril mikrofoni 🎤") + '</span><textarea id="v-text" autocomplete="off"></textarea></label>' +
+    '<p class="hint" id="v-msg" role="status"></p>' +
+    '<button class="btn primary big" id="v-go">Edasi</button>',
+    function(p){
+      var txt = $("#v-text", p), msg = $("#v-msg", p), go = $("#v-go", p), mic = $("#v-mic", p), rec = null;
+      function run(){
+        var raw = txt.value.trim(); if (!raw){ msg.textContent = "Ütle või kirjuta midagi."; return; }
+        var o = parseLocal(raw);
+        if (o){ var e1 = applyParsed(o); if (e1) msg.textContent = e1; return; }
+        if (!sampleFn){ msg.textContent = "Ei saanud aru. Kirjuta summa numbritega, nt „Bolt 23“."; return; }
+        go.disabled = true; msg.textContent = "Tõlgendan…";
+        parseAI(raw).then(function(r){ go.disabled = false; var e2 = applyParsed(r); if (e2) msg.textContent = e2; }, function(e){
+          go.disabled = false;
+          msg.textContent = e && e.code === "not_granted" ? "Tõlgendamiseks on vaja luba. Proovi uuesti ja luba see." : "Ei saanud tõlgendada. Kirjuta summa numbritega, nt „Bolt 23“.";
+        });
+      }
+      // Üks kõnetuvastuse eksemplar kogu äpi jaoks; vanad sündmused jäetakse seansi numbri järgi kõrvale
+      var listening = false, stopT = null, maxT = null, sess = 0, retried = false;
+      function resetMic(){ listening = false; clearTimeout(stopT); clearTimeout(maxT); if (mic){ mic.textContent = "🎤 Räägi"; mic.classList.add("primary"); mic.disabled = false; } }
+      function finish(auto){
+        if (!listening) return;
+        sess++; resetMic();
+        try { voiceRec && voiceRec.abort(); } catch (e){}
+        if (txt.value.trim()) run(); else if (!auto) msg.textContent = "Ei kuulnud midagi. Proovi uuesti või kirjuta.";
+      }
+      function stopListening(){
+        if (!listening) return;
+        msg.textContent = "Lõpetan…";
+        try { voiceRec.stop(); } catch (e){}
+        clearTimeout(stopT); stopT = setTimeout(function(){ finish(); }, 1000);
+      }
+      go.onclick = function(){ if (listening){ sess++; resetMic(); try { voiceRec.abort(); } catch (e){} } run(); };
+      if (mic){
+        mic.onclick = function(){
+          if (listening){ stopListening(); return; }
+          if (!voiceRec){ try { voiceRec = new SR(); } catch (e){ msg.textContent = "Kõnetuvastus pole siin saadaval. Kasuta klaviatuuri mikrofoni nuppu."; return; } }
+          var my = ++sess, r = voiceRec;
+          r.lang = "et-EE"; r.interimResults = true; r.maxAlternatives = 1;
+          r.onresult = function(ev){
+            if (my !== sess) return;
+            var s = ""; for (var i = 0; i < ev.results.length; i++) s += ev.results[i][0].transcript; txt.value = s;
+            if (ev.results[ev.results.length - 1].isFinal){ clearTimeout(stopT); stopT = setTimeout(function(){ if (my === sess) finish(true); }, 800); }
+          };
+          r.onerror = function(ev){
+            if (my !== sess || ev.error === "aborted") return;
+            if (ev.error === "not-allowed" || ev.error === "service-not-allowed"){
+              lsSet("dp_micblocked", true); sess++; resetMic(); try { r.abort(); } catch (x){}
+              mic.remove(); mic = null;
+              $(".fld span", p).textContent = "Puuduta siia ja vajuta klaviatuuril mikrofoni 🎤";
+              msg.textContent = "Telefon ei luba äpil mikrofoni otse kasutada. Puuduta tekstivälja ja vajuta klaviatuuril mikrofoni nuppu, see töötab samamoodi.";
+              txt.focus(); return;
+            }
+            msg.textContent = ev.error === "no-speech" ? "Ei kuulnud midagi. Proovi uuesti." : "Kõnetuvastus ei õnnestunud (" + ev.error + "). Kirjuta tekstiväljale.";
+            finish(true);
+          };
+          r.onend = function(){ if (my === sess) finish(true); };
+          txt.value = ""; listening = true;
+          mic.textContent = "■ Lõpeta rääkimine"; mic.classList.remove("primary");
+          msg.textContent = "Kuulan… Kui oled lõpetanud, oota hetk või vajuta „Lõpeta rääkimine“.";
+          try { r.start(); retried = false; maxT = setTimeout(stopListening, 15000); }
+          catch (e){
+            sess++; resetMic();
+            if (!retried){
+              retried = true; try { r.abort(); } catch (x){} voiceRec = null; mic.disabled = true; msg.textContent = "Käivitan mikrofoni…";
+              setTimeout(function(){ mic.disabled = false; mic.onclick(); }, 600);
+            } else { retried = false; voiceRec = null; msg.textContent = "Mikrofoni ei saanud käivitada. Proovi uuesti või kasuta klaviatuuri mikrofoni nuppu."; }
+          }
+        };
+      } else txt.focus();
+    });
+}
+// ---------- Tšeki lugemine ----------
+var sampleFn = null, sampleImg = false;
+var RC_PROMPT_BASE = "Sul on pilt Eesti poe, tankla või parkla tšekist (või e-tšeki ekraanipilt). Loe sealt andmed ja vasta AINULT ühe JSON-objektiga, ilma muu tekstita. Väljad: " +
+  "total (makstud kogusumma eurodes, number), date (\"YYYY-MM-DD\" või null), time (\"HH:MM\" või null), shop (poe/tankla/parkla nimi lühidalt või null)";
+function readReceipt(blob, kind){
+  var extra = kind === "fuel"
+    ? ", liters (tangitud kogus, number või null; CNG puhul kilogrammid), price (ühikuhind eurodes, number või null), fuel (\"Bensiin\", \"Diisel\", \"LPG\", \"CNG\" või null; nt 95, 98 ja E10 on Bensiin)"
+    : ", category (üks täpselt neist või null: " + EXP_CATS.map(function(c){ return "\"" + c + "\""; }).join(", ") + ")";
+  var prompt = RC_PROMPT_BASE + extra + ". Kui välja ei saa kindlalt lugeda, pane null. Kasuta numbrites punkti, mitte koma. Ära arva.";
+  return sampleFn.json(prompt, { images: blob, cache: false });
+}
+function getBlobFor(st){
+  if (st.blob) return Promise.resolve(st.blob);
+  return rcBlob(st.id);
+}
+function rcReadBtn(st){ return (sampleFn && sampleImg && st.id && !st.busy) ? '<button type="button" class="btn small full rcread" data-rcread>✨ Loe andmed tšekilt</button>' : ""; }
+function rcTs(o){
+  if (!o || !o.date || !/^\d{4}-\d{2}-\d{2}$/.test(o.date)) return null;
+  var tm = o.time && /^\d{1,2}:\d{2}$/.test(o.time) ? o.time : "12:00";
+  var t = new Date(o.date + "T" + (tm.length === 4 ? "0" + tm : tm)).getTime();
+  if (isNaN(t) || t > now() + 6 * HOUR || t < now() - 400 * 24 * HOUR) return null;
+  return t;
+}
+function numOk(v, lo, hi){ v = typeof v === "string" ? parseNum(v) : v; return typeof v === "number" && isFinite(v) && v >= lo && v <= hi ? v : null; }
+// ---------- Tšekipildid ----------
+function rcInner(st){
+  var id = st.id;
+  return (id ? '<img data-rcid="' + esc(id) + '" alt="Tšeki pilt, puuduta suurendamiseks">' : "") +
+    (assets ? '<div class="toggle">' +
+      '<label class="btn small rcbtn">' + (id ? "📷 Uus pilt" : "📷 Pildista tšekk") + '<input type="file" accept="image/*" capture="environment"></label>' +
+      (id ? '<button type="button" class="btn small danger" data-rcrm>Eemalda pilt</button>'
+          : '<label class="btn small rcbtn">🖼 Galeriist<input type="file" accept="image/*"></label>') +
+      '</div>' : "") +
+    rcReadBtn(st) +
+    '<p class="hint rcmsg">' + esc(st.msg || "") + '</p>';
+}
+function rcHtml(st){ return (assets || st.id) ? '<div class="rc" id="rc">' + rcInner(st) + '</div>' : ""; }
+function shrink(file){
+  return new Promise(function(res){
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, 1800 / Math.max(w, h));
+      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(function(b){ res(b || file); }, "image/jpeg", 0.82);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); res(file); };
+    img.src = url;
+  });
+}
+function rcErrMsg(e){
+  var c = e && e.code;
+  if (c === "unsupported_type") return "Seda pildiformaati ei saa salvestada. Proovi pilti galeriist või tee ekraanipilt.";
+  if (c === "too_large") return "Pilt on liiga suur.";
+  if (c === "quota_or_state") return "Piltide salvestusruum on täis.";
+  if (c === "rate_limited") return "Liiga palju üleslaadimisi korraga. Proovi hetke pärast uuesti.";
+  return "Pilti ei saanud üles laadida. Kontrolli levi ja proovi uuesti.";
+}
+function wireReceipt(p, st){
+  var box = $("#rc", p); if (!box) return;
+  function draw(msg){ st.msg = msg || ""; box.innerHTML = rcInner(st); bind(); }
+  function bind(){
+    rcHydrate(box);
+    $$("input[type=file]", box).forEach(function(inp){
+      inp.onchange = function(){
+        var f = inp.files && inp.files[0]; if (!f || !assets) return;
+        st.busy = true; draw("Laadin pilti üles…");
+        shrink(f).then(function(b){ return assets.upload(b, b.type ? undefined : { type: "image/jpeg" }); }).then(function(r){
+          if (st.id && st.id !== st.orig) assets.delete(st.id).catch(function(){});
+          st.id = r.id; st.blob = b; st.busy = false; draw(sampleFn && sampleImg ? "Pilt lisatud. Vajuta „Loe andmed tšekilt“ või täida väljad ise." : "Pilt lisatud. Vajuta Salvesta.");
+        }, function(e){ st.busy = false; draw(rcErrMsg(e)); });
+      };
+    });
+    var rd = $("[data-rcread]", box);
+    if (rd) rd.onclick = function(){
+      if (!st.onRead) return;
+      st.busy = true; draw("Loen tšekki…");
+      getBlobFor(st).then(function(bl){ return readReceipt(bl, st.kind); }).then(function(o){
+        st.busy = false; draw(st.onRead(o || {}));
+      }, function(e){
+        st.busy = false;
+        var c = e && e.code;
+        draw(c === "not_granted" ? "Lugemiseks on vaja luba. Proovi uuesti ja luba see." : c === "rate_limited" ? "Liiga palju päringuid. Proovi hetke pärast." : c === "invalid_json" ? "Tšekki ei õnnestunud lugeda. Täida väljad ise." : "Tšekki ei saanud lugeda. Kontrolli levi ja proovi uuesti.");
+      });
+    };
+    var rm = $("[data-rcrm]", box);
+    if (rm) rm.onclick = function(){ if (st.id && st.id !== st.orig && assets) assets.delete(st.id).catch(function(){}); st.id = null; st.blob = null; draw(st.orig ? "Pilt eemaldatakse, kui vajutad Salvesta." : ""); };
+    var img = $("img", box);
+    if (img){ img.onclick = function(){ img.classList.toggle("open"); }; img.onerror = function(){ img.remove(); if (!st.msg){ $(".rcmsg", box).textContent = "Pilti ei õnnestunud laadida."; } }; }
+  }
+  bind();
+}
+function rcCommit(st){ if (assets && st.orig && st.orig !== st.id) assets.delete(st.orig).catch(function(){}); }
+function rcDrop(st){ if (!assets) return; [st.orig, st.id].forEach(function(id, i, a){ if (id && a.indexOf(id) === i) assets.delete(id).catch(function(){}); }); }
+function loadZip(){
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise(function(res, rej){
+    var sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    sc.onload = function(){ window.JSZip ? res(window.JSZip) : rej(new Error("zip")); };
+    sc.onerror = function(){ rej(new Error("zip")); };
+    document.head.appendChild(sc);
+  });
+}
+function slug(t){ return String(t).replace(/[^0-9A-Za-zÕÄÖÜŠŽõäöüšž]+/g, "-").replace(/^-|-$/g, ""); }
+function exportReceipts(y, m){
+  if (!downloads) return;
+  var a = new Date(y, m, 1).getTime(), b = new Date(y, m + 1, 1).getTime(), items = [];
+  Object.values(S.fuel).forEach(function(f){ if (f.t >= a && f.t < b) items.push({ t: f.t, kind: "Tankimine " + fuelType(f), amt: +f.sum || 0, note: f.station || "", rc: f.rc }); });
+  Object.values(S.expenses).forEach(function(x){
+    if (x.t < a || x.t >= b) return;
+    var notes = []; if (x.cat === "Parkimine" && x.phone) notes.push("telefoniga"); if (x.note) notes.push(x.note);
+    items.push({ t: x.t, kind: x.cat, amt: +x.amt || 0, note: notes.join(", "), rc: x.rc });
+  });
+  if (!items.length){ toast("Selles kuus pole kulusid"); return; }
+  items.sort(function(p, q){ return p.t - q.t; });
+  toast("Koostan faili…");
+  loadZip().then(function(JSZip){
+    var zip = new JSZip(), used = {};
+    return Promise.all(items.map(function(it){
+      if (!it.rc) return null;
+      return rcBlob(it.rc).then(function(bl){
+        var ext = /png/.test(bl.type) ? "png" : /webp/.test(bl.type) ? "webp" : "jpg";
+        var base = dateKey(it.t) + "_" + hm(it.t).replace(":", "") + "_" + slug(it.kind) + "_" + nf2.format(it.amt).replace(/\s/g, "") + "EUR", n = base, k = 2;
+        while (used[n]) n = base + "_" + (k++);
+        used[n] = 1; it.file = n + "." + ext; zip.file(it.file, bl);
+      }).catch(function(){ it.file = "pilti ei leitud"; });
+    })).then(function(){
+      var rows = [["Kuupäev", "Kell", "Liik", "Summa €", "Märkus", "Tšeki fail"]], tot = 0;
+      items.forEach(function(it){ tot += it.amt; rows.push([dmy(it.t), hm(it.t), it.kind, it.amt, it.note, it.file || "tšekk puudub"]); });
+      rows.push(["", "", "Kokku", tot, "", ""]);
+      zip.file("kulud-" + y + "-" + pad(m + 1) + ".csv", csv(rows));
+      return zip.generateAsync({ type: "blob" });
+    });
+  }).then(function(blob){
+    return downloads.save({ filename: "driver-profit-tsekid-" + y + "-" + pad(m + 1) + ".zip", data: blob }).then(function(){ toast("Fail salvestatud"); }, function(e){ if (e && e.code !== "declined") toast("Faili ei saanud salvestada"); });
+  }, function(){ toast("Faili koostamine ebaõnnestus. Kontrolli levi."); });
+}
+function lastSrc(){ return lsGet("dp_lastsrc") || "Bolt"; }
+
+// ---------- Vaated ----------
+function render(){
+  memo = {};
+  $$("nav.tabs button").forEach(function(b){ if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  var html = '<div class="top"><div><h1>Driver Profit</h1><div class="date">' + cap(wdName(now())) + ", " + new Date(now()).getDate() + ". " + MON[new Date(now()).getMonth()] + '</div></div><div class="sync" id="sync"></div></div>';
+  if (tab === "today") html += viewToday();
+  else if (tab === "history") html += viewHistory();
+  else if (tab === "car") html += viewCar();
+  else html += viewSettings();
+  $("#app").innerHTML = html;
+  renderSync();
+  if (tab === "settings") mountSettings();
+}
+
+function figs(c, active){
+  var est = '<em>hinnang</em>', prov = '<em>esialgne</em>';
+  return '<div class="figs">' +
+    '<div><span>Tulu</span><b class="num">' + eur(c.inc) + '</b></div>' +
+    '<div><span>Bruto</span><b class="num">' + perH(c.gross) + '</b></div>' +
+    '<div><span>Läbisõit</span><b class="num">' + kmf(c.km) + '</b>' + (c.kmEst ? est : "") + '</div>' +
+    '<div><span>Kütus</span><b class="num">' + eur(c.fuel) + '</b>' + (c.fuel != null && (!c.fuelReal || c.kmEst) ? est : "") + '</div>' +
+    '<div><span>Rent nädalatasust</span><b class="num">' + eur(c.fixedRent) + '</b>' + (c.rentProv ? prov : "") + '</div>' +
+    '<div><span>Rent km-tasust</span><b class="num">' + eur(c.kmRent) + '</b>' + (c.kmRent != null && c.kmEst ? est : "") + '</div>' +
+    '<div><span>Muud kulud</span><b class="num">' + eur(c.other) + '</b></div>' +
+    '<div><span>Puhas km kohta</span><b class="num">' + perKm(c.netKm) + '</b></div>' +
+    '</div>';
+}
+
+function viewToday(){
+  var w = activeWorkday(), h = "";
+  if (w){
+    var c = calc(w), paused = (w.pauses || []).some(function(p){ return !p.e; });
+    h += '<section class="hero" aria-label="Tänane tööpäev">' +
+      '<div class="state">Tööpäev käib, algus ' + hm(w.s) + (dateKey(w.s) !== dateKey(now()) ? " (" + dm(w.s) + ")" : "") + '</div>' +
+      '<div class="big num">' + (c.netH != null ? nf2.format(c.netH) : "–") + '<small>€/h</small></div>' +
+      '<div class="cap">tegelik tunnitasu' + (c.netH != null && (c.kmEst || c.rentProv) ? ", esialgne" : "") + '</div>' +
+      '<div class="pair"><div><b class="num">' + dur(workedMs(w)) + '</b><span>töötatud</span></div>' +
+      '<div><b class="num">' + eur(c.net) + '</b><span>tegelik teenistus</span></div></div>' +
+      (paused ? '<div class="paused">Paus käib</div>' : "") +
+      '</section>' + figs(c, true) + (Object.keys(c.bySrc || {}).length ? '<section class="rep" style="margin-bottom:6px"><div class="rh">Platvormid täna</div><table>' + srcRows(srcStats([w]), c.net != null && c.h > 0 ? (c.inc - c.net) / c.h : null, false) + '</table></section>' : "") + goalCard(new Date(now()).getFullYear(), new Date(now()).getMonth(), true);
+    if (c.net == null) h += '<p class="note">Tegeliku teenistuse jaoks on vaja teada läbisõitu. Lisa tulu salvestamisel odomeetri näit või lõpeta tööpäev. Mõne päeva pärast hindab äpp läbisõitu ise.</p>';
+    h += '<div class="actions">' +
+      '<button class="btn primary" data-act="income">+ Tulu</button>' +
+      '<button class="btn" data-act="voice">🎤 Ütle</button>' +
+      '<button class="btn" data-act="fuel">⛽ Tankisin</button>' +
+      '<button class="btn" data-act="expense">+ Kulu</button>' +
+      '<button class="btn" data-act="event">+ Märkus</button>' +
+      '<button class="btn" data-act="pause">' + (paused ? "▶ Jätka" : "⏸ Paus") + '</button>' +
+      '<button class="btn big" data-act="end">■ Lõpeta tööpäev</button>' +
+      '</div>';
+    var ps = (w.periods || []).slice().sort(function(a, b){ return b.s - a.s; });
+    h += '<div class="sec"><h2>Tänased tuluperioodid</h2><div class="list">' + (ps.length ? ps.map(function(p){ return periodRow(w, p); }).join("") : '<div class="empty">Veel pole tulu lisatud.</div>') + '</div></div>';
+  } else {
+    var today = workdaysSorted().filter(function(x){ return dateKey(x.s) === dateKey(now()); });
+    if (today.length){
+      var t = { inc: 0, h: 0, net: 0, unk: false };
+      today.forEach(function(x){ var c = calc(x); t.inc += c.inc; t.h += c.h; if (c.net != null) t.net += c.net; else t.unk = true; });
+      h += '<section class="hero"><div class="state">Täna tehtud</div><div class="big num">' + (!t.unk && t.h > 0 ? nf2.format(t.net / t.h) : "–") + '<small>€/h</small></div><div class="cap">tegelik tunnitasu</div>' +
+        '<div class="pair"><div><b class="num">' + eur(t.inc) + '</b><span>tulu</span></div><div><b class="num">' + dur(t.h * HOUR) + '</b><span>töötatud</span></div><div><b class="num">' + (t.unk ? "–" : eur(t.net)) + '</b><span>tegelik teenistus</span></div></div></section>';
+    } else {
+      var ws = weekSummary(mondayOf(now()));
+      var hasRate = ws.h > 0 && !ws.unknown;
+      h += '<section class="hero"><div class="state">Tööpäev pole alanud</div>' +
+        (hasRate ? '<div class="big num">' + nf2.format(ws.net / ws.h) + '<small>€/h</small></div><div class="cap">tegelik tunnitasu sel nädalal' + (ws.prov ? ", esialgne" : "") + '</div>'
+          : '<div class="cap" style="font-size:1.15rem;color:var(--hero-ink);margin-top:10px">Sel nädalal pole veel tööpäevi. Tunnitasu ilmub siia pärast esimest tööpäeva.</div>') +
+        '<div class="pair"><div><b class="num">' + eur(ws.inc) + '</b><span>tulu</span></div><div><b class="num">' + dur(ws.h * HOUR) + '</b><span>töötatud</span></div><div><b class="num">' + ws.days + '</b><span>tööpäeva</span></div></div></section>';
+    }
+    h += goalCard(new Date(now()).getFullYear(), new Date(now()).getMonth(), true) + reviewNudge();
+    h += '<div class="actions"><button class="btn primary big" data-act="start">▶ Alusta tööpäeva</button>' +
+      '<button class="btn" data-act="fuel">⛽ Tankisin</button><button class="btn" data-act="expense">+ Kulu</button>' +
+      '<button class="btn" data-act="event">+ Märkus</button><button class="btn" data-act="voice">🎤 Ütle</button></div>';
+  }
+  return h;
+}
+function periodRow(w, p){
+  var hrs = periodHours(w, p), inc = periodIncome(p);
+  return '<button class="item" data-act="editperiod" data-w="' + w.id + '" data-p="' + p.id + '"><div class="l"><b class="num">' + hm(p.s) + "–" + hm(p.e) + '</b><span>' +
+    esc((p.lines || []).map(function(l){ return l.src + " " + (l.rate != null ? perH(+l.rate) + " = " : "") + eur(+l.amt); }).join(", ")) + (p.odo != null ? ", " + nf0.format(p.odo) + " km" : "") +
+    '</span></div><div class="r"><b class="num">' + eur(inc) + '</b><span class="num">' + perH(hrs > 0 ? inc / hrs : null) + '</span></div></button>';
+}
+
+function monthSummary(y, m){
+  var a = new Date(y, m, 1).getTime(), b = new Date(y, m + 1, 1).getTime();
+  var r = { inc: 0, h: 0, km: 0, fuel: 0, rent: 0, fixRent: 0, kmRent: 0, other: 0, net: 0, days: 0, unknown: false, prov: false, fuelPaid: 0, liters: 0 };
+  var linked = {}, em = expenseMap();
+  workdaysSorted().forEach(function(w){
+    if (w.s < a || w.s >= b) return;
+    var c = calc(w); r.days++; r.inc += c.inc; r.h += c.h;
+    if (c.km != null) r.km += c.km;
+    if (c.fuel != null){ r.fuel += c.fuel; if (!c.fuelReal) r.fuelEst = true; }
+    if (c.rent != null) r.rent += c.rent;
+    r.fixRent += c.fixedRent; if (c.kmRent != null) r.kmRent += c.kmRent;
+    r.other += c.other;
+    if (c.net != null) r.net += c.net; else r.unknown = true;
+    if (c.rentProv || c.kmEst || !w.e) r.prov = true;
+    (em[w.id] || []).forEach(function(x){ linked[x.id] = 1; });
+  });
+  Object.values(S.expenses).forEach(function(x){ if (x.t >= a && x.t < b && !linked[x.id]){ r.other += +x.amt || 0; r.net -= +x.amt || 0; } });
+  r.park = 0; r.parkPhone = 0;
+  Object.values(S.expenses).forEach(function(x){ if (x.t >= a && x.t < b && x.cat === "Parkimine"){ r.park += +x.amt || 0; if (x.phone) r.parkPhone += +x.amt || 0; } });
+  Object.values(S.fuel).forEach(function(f){ if (f.t >= a && f.t < b){ r.fuelPaid += +f.sum || 0; if (fuelUnit(fuelType(f)) === "kg") r.kg = (r.kg || 0) + (+f.l || 0); else r.liters += +f.l || 0; } });
+  return r;
+}
+function goalCard(y, m, withTitle){
+  var goal = +settings().monthGoal || 0;
+  if (!goal){
+    return withTitle ? '<div class="goal"><p>Pane kuu kasumi eesmärk ja näed siin, kui palju on veel puudu. <button data-act="goalset">Määra eesmärk</button></p></div>' : "";
+  }
+  var r = monthSummary(y, m), net = r.net, pct = Math.max(0, Math.min(100, net / goal * 100));
+  var left = goal - net, rate = r.h > 0 ? net / r.h : null;
+  var cur = new Date(now()), isCur = cur.getFullYear() === y && cur.getMonth() === m;
+  var msg;
+  if (left <= 0) msg = "Eesmärk täidetud, " + eur(-left) + " üle.";
+  else {
+    msg = "Puudu " + eur(left) + ".";
+    if (rate != null && rate > 0) msg += " Praeguse " + perH(rate) + " juures on see umbes " + nf0.format(Math.ceil(left / rate)) + " h tööd.";
+    if (isCur){
+      var daysLeft = new Date(y, m + 1, 0).getDate() - cur.getDate() + 1;
+      msg += " Kuu lõpuni " + daysLeft + (daysLeft === 1 ? " päev." : " päeva.");
+    }
+  }
+  return '<div class="goal">' +
+    '<div class="gt"><b class="num">' + eur(net) + '</b><span>eesmärk ' + eur(goal) + '</span></div>' +
+    '<div class="bar' + (left <= 0 ? " done" : "") + '" role="progressbar" aria-label="Kuu eesmärk" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(pct) + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+    '<p>' + (withTitle ? cap(MONL[m]) + " puhaskasum " + Math.round(pct) + " % eesmärgist. " : Math.round(pct) + " % eesmärgist. ") + msg + (r.unknown ? " Mõnel päeval puudub läbisõit, summa võib muutuda." : "") + '</p>' +
+  '</div>';
+}
+function viewMonth(){
+  var r = monthSummary(histY, histM);
+  return '<section class="rep" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+    '<button class="btn small" data-act="mprev" aria-label="Eelmine kuu">‹</button><div class="rh">' + cap(MONL[histM]) + " " + histY + '</div><button class="btn small" data-act="mnext" aria-label="Järgmine kuu">›</button></div>' +
+    '<div class="final" style="margin-top:8px"><div><b class="num ' + (r.net < 0 ? "neg" : "pos") + '">' + (r.unknown || !r.days ? (r.days ? "–" : eur(r.net)) : eur(r.net)) + '</b><span>puhaskasum kuus' + (r.prov ? ", esialgne" : "") + '</span></div><div><b class="num">' + perH(r.h > 0 && !r.unknown ? r.net / r.h : null) + '</b><span>' + r.days + " tööpäeva, " + nf0.format(Math.round(r.h)) + ' h</span></div></div>' +
+    '<table><tr><td>Tulu</td><td class="num">' + eur(r.inc) + '</td></tr>' +
+    '<tr><td>Kütus' + (r.fuelEst ? " (hinnang)" : "") + '</td><td class="num">− ' + eur(r.fuel) + '</td></tr>' +
+    '<tr><td>Rent nädalatasust</td><td class="num">− ' + eur(r.fixRent) + '</td></tr>' +
+    '<tr><td>Rent km-tasust</td><td class="num">− ' + eur(r.kmRent) + '</td></tr>' +
+    (r.park ? '<tr><td>Parkimine</td><td class="num">− ' + eur(r.park) + '</td></tr>' + (r.parkPhone ? '<tr class="sub"><td colspan="2">sellest telefoniarvele ' + eur(r.parkPhone) + '</td></tr>' : "") : "") +
+    '<tr><td>Pesu ja muud</td><td class="num">− ' + eur(r.other - r.park) + '</td></tr>' +
+    (r.fuelPaid ? '<tr class="sub"><td colspan="2">Tangitud ' + [r.liters ? nf2.format(r.liters) + " l" : "", r.kg ? nf2.format(r.kg) + " kg" : ""].filter(Boolean).join(" + ") + ", makstud " + eur2(r.fuelPaid) + (r.liters && !r.kg ? ", keskm. " + nf3.format(r.fuelPaid / r.liters) + " €/l" : "") + '</td></tr>' : "") +
+    '<tr class="sub"><td colspan="2">' + kmf(r.km) + ' läbisõitu' + (r.km > 0 && !r.unknown ? ", puhas " + perKm(r.net / r.km) : "") + '</td></tr></table>' +
+    goalCard(histY, histM, false) +
+    '<button class="btn full" style="margin-top:12px" data-act="mdetail">Kuu täielik kokkuvõte</button>' +
+    (downloads ? '<button class="btn full" style="margin-top:12px" data-act="rczip">Laadi alla kuu kulud ja tšekid (ZIP)</button>' : "") +
+    (r.unknown ? '<p class="hint">Mõnel tööpäeval puudub läbisõit, seepärast pole kuu kasumit veel võimalik arvutada.</p>' : "") +
+    '</section>';
+}
+function srcStats(wds){
+  var out = {};
+  wds.forEach(function(w){
+    var seen = {};
+    (w.periods || []).forEach(function(p){
+      var hrs = periodHours(w, p), tot = periodIncome(p), lines = p.lines || [];
+      lines.forEach(function(l){
+        var amt = +l.amt || 0, share = tot > 0 ? amt / tot : 1 / lines.length;
+        var o = out[l.src] || (out[l.src] = { inc: 0, h: 0, days: 0 });
+        o.inc += amt; o.h += hrs * share;
+        if (!seen[l.src]){ seen[l.src] = 1; o.days++; }
+      });
+    });
+  });
+  return out;
+}
+function sourceRates(y, m){
+  var a = new Date(y, m, 1).getTime(), b = new Date(y, m + 1, 1).getTime();
+  return srcStats(workdaysSorted().filter(function(w){ return w.s >= a && w.s < b; }));
+}
+function srcRows(sr, costH, perDay){
+  var keys = Object.keys(sr).filter(function(k){ return sr[k].inc > 0 || sr[k].h > 0; });
+  keys.sort(function(a, b){ return (sr[b].h > 0 ? sr[b].inc / sr[b].h : 0) - (sr[a].h > 0 ? sr[a].inc / sr[a].h : 0); });
+  var max = 0; keys.forEach(function(k){ if (sr[k].h > 0) max = Math.max(max, sr[k].inc / sr[k].h); });
+  return keys.map(function(k){
+    var o = sr[k], g = o.h > 0 ? o.inc / o.h : null, n = g != null && costH != null ? g - costH : null;
+    var sub = eur(o.inc) + ", " + dur(o.h * HOUR);
+    if (perDay && o.days > 0) sub += "<br>päevas keskm. " + eur(o.inc / o.days) + ", " + dur(o.h / o.days * HOUR) + " (" + o.days + (o.days === 1 ? " päev" : " päeva") + ")";
+    return '<tr><td><b>' + esc(k) + '</b><br><span class="num" style="font-size:.85rem;opacity:.75">' + sub + '</span>' +
+      (g != null && max > 0 ? '<div class="bar" style="margin:6px 0 2px"><i style="width:' + Math.max(2, g / max * 100).toFixed(1) + '%"></i></div>' : "") + '</td>' +
+      '<td class="num" style="vertical-align:top"><b>' + perH(g) + '</b><br><span style="font-size:.85rem;opacity:.75">puhas ' + (n != null ? perH(n) : "–") + '</span></td></tr>';
+  }).join("");
+}
+function rateCard(y, m, r){
+  var sr = sourceRates(y, m);
+  if (!Object.keys(sr).length) return "";
+  var costH = r.h > 0 && !r.unknown ? (r.fuel + r.rent + r.other) / r.h : null;
+  return '<section class="rep" style="margin-bottom:6px"><div class="rh">Tunnitasu platvormide kaupa</div>' +
+    '<table>' + srcRows(sr, costH, true) + '</table>' +
+    '<p class="hint">Bruto on platvormi tulu jagatud selle tuluperioodide tundidega. Puhas arvestab maha kuu keskmise kulu tunnis' + (costH != null ? " (" + perH(costH) + ")" : "") + '. Päeva keskmine arvestab ainult päevi, mil sellel platvormil sõitsid. Kui ühes perioodis on mitu platvormi, jagatakse tunnid tulu järgi.</p></section>';
+}
+// ---------- Kilomeetri piirid ----------
+function kmLimits(a, b, goalShare){
+  var r = rangeDetail(a, b), t = now();
+  if (r.unknown || !(r.km > 0)) return null;
+  var l1 = (r.fuel + r.kmRent) / r.km, l2 = r.costs / r.km;
+  var first = workdaysSorted()[0], a0 = a;
+  if (first){ var fd = new Date(first.s); fd.setHours(0, 0, 0, 0); a0 = Math.max(a, fd.getTime()); }
+  var span = b - a0, done = Math.min(span, Math.max(0, t - a0));
+  var projKm = done > 0 ? r.km * span / done : null;
+  var l3 = goalShare > 0 && projKm > 0 ? l2 + goalShare / projKm : null;
+  return { l1: l1, l2: l2, l3: l3, act: r.inc / r.km, km: r.km, prov: r.prov || t < b };
+}
+function kmLimitsCard(){
+  var goal = +settings().monthGoal || 0;
+  var wm = mondayOf(now()), w = kmLimits(wm, addDays(wm, 7), goal * 7 / 30.44);
+  if (!w){ wm = addDays(wm, -7); w = kmLimits(wm, addDays(wm, 7), goal * 7 / 30.44); }
+  var ma = new Date(histY, histM, 1).getTime(), mb = new Date(histY, histM + 1, 1).getTime();
+  var m = kmLimits(ma, mb, goal);
+  if (!w && !m) return "";
+  function cell(o, k){ return '<td class="num" style="text-align:right;padding-left:10px;white-space:nowrap">' + (o && o[k] != null ? perKm(o[k]) : "–") + '</td>'; }
+  function act(o){
+    if (!o) return '<td class="num" style="text-align:right">–</td>';
+    var c = o.act < o.l2 ? "neg" : (o.l3 != null && o.act >= o.l3 ? "pos" : "");
+    var st = c ? "" : "color:var(--warn-ink);background:var(--warn-bg);border-radius:6px;padding:0 4px;";
+    return '<td class="num" style="text-align:right;padding-left:10px;white-space:nowrap"><b class="' + c + '" style="' + st + '">' + perKm(o.act) + '</b></td>';
+  }
+  return '<section class="rep" style="margin-bottom:6px"><div class="rh">Kilomeetri piirid</div>' +
+    '<table><tr class="sub"><td></td><td style="text-align:right;padding-left:10px;white-space:nowrap">' + (w ? rangeLabel(wm) : "Nädal") + '</td><td style="text-align:right;padding-left:10px;white-space:nowrap">' + cap(MONL[histM]) + '</td></tr>' +
+    '<tr><td>Miinimum<br><span style="font-size:.8rem;opacity:.75">kütus + rendi km-tasu</span></td>' + cell(w, "l1") + cell(m, "l1") + '</tr>' +
+    '<tr><td>Tasuvuspiir<br><span style="font-size:.8rem;opacity:.75">+ nädalarent ja muud kulud</span></td>' + cell(w, "l2") + cell(m, "l2") + '</tr>' +
+    (goal ? '<tr><td>Eesmärk<br><span style="font-size:.8rem;opacity:.75">' + eur(goal) + ' kuus kasumit</span></td>' + cell(w, "l3") + cell(m, "l3") + '</tr>' : "") +
+    '<tr class="tot"><td>Sinu tulu</td>' + act(w) + act(m) + '</tr></table>' +
+    '<p class="hint">Kõik läbitud km, ka tühisõit. Alla miinimumi on iga km otsene kahjum, alla tasuvuspiiri ei kata sa renti. Punane: alla tasuvuspiiri, kollane: piiride vahel, roheline: eesmärk täis.' +
+    ((w && w.prov) || (m && m.prov) ? " Pooleli oleva perioodi eesmärgipiir on arvutatud senise tempo järgi." : "") +
+    (goal ? "" : ' <button data-act="goalset" style="background:none;border:0;padding:0;color:var(--focus);font-weight:600;cursor:pointer">Määra kuu eesmärk</button>, siis näed ka eesmärgipiiri.') + '</p></section>';
+}
+// ---------- Nädala ülevaade ----------
+var revM = addDays(mondayOf(Date.now()), -7), revBusy = null, revErr = null;
+function r2(x){ return x == null || isNaN(x) ? null : Math.round(x * 100) / 100; }
+function weekData(m){
+  var e = addDays(m, 7), days = [], exps = [], evs = [], em = expenseMap();
+  workdaysSorted().forEach(function(w){
+    if (w.s < m || w.s >= e) return;
+    var c = calc(w), bs = {};
+    Object.keys(c.bySrc || {}).forEach(function(k){ bs[k] = r2(c.bySrc[k]); });
+    days.push({
+      paev: cap(wdName(w.s)) + " " + dm(w.s), algus: hm(w.s), lopp: w.e ? hm(w.e) : "käib veel",
+      tunnid: r2(c.h), km: c.km != null ? Math.round(c.km) : null, tulu: r2(c.inc), tulu_platvormiti: bs,
+      kutus: r2(c.fuel), rent: r2(c.rent), muud_kulud: r2(c.other), puhaskasum: r2(c.net), puhas_tunnis: r2(c.netH),
+      pausid_min: Math.round(pauseOverlap(w, w.s, wdEnd(w)) / MIN),
+      tuluperioodid: (w.periods || []).slice().sort(function(a, b){ return a.s - b.s; }).map(function(p){
+        return { aeg: hm(p.s) + "–" + hm(p.e), tulu: r2(periodIncome(p)), platvorm: (p.lines || []).map(function(l){ return l.src; }).join(" + ") };
+      })
+    });
+  });
+  Object.values(S.expenses).forEach(function(x){ if (x.t >= m && x.t < e) exps.push({ paev: dm(x.t), kategooria: x.cat, summa: r2(+x.amt), markus: x.note || "" }); });
+  Object.values(S.events).forEach(function(v){ var t = new Date(v.date + "T12:00").getTime(); if (t >= m && t < e) evs.push({ kuupaev: v.date, sildid: (v.tags || []).join(", "), tekst: v.text || "" }); });
+  var ws = weekSummary(m), prev = [];
+  for (var i = 1; i <= 4; i++){ var pm = addDays(m, -7 * i), p = weekSummary(pm); if (p.days) prev.push({ nadal: rangeLabel(pm), tulu: r2(p.inc), puhaskasum: p.unknown ? null : r2(p.net), tunnid: r2(p.h), puhas_tunnis: !p.unknown && p.h > 0 ? r2(p.net / p.h) : null }); }
+  var t = termsAt(m);
+  return {
+    nadal: rangeLabel(m), auto_rent: t.weekly + " € nädalas + " + t.perKm + " €/km",
+    kokku: { tooppaevi: ws.days, tunnid: r2(ws.h), km: Math.round(ws.km), tulu: r2(ws.inc), puhaskasum: ws.unknown ? null : r2(ws.net), puhas_tunnis: !ws.unknown && ws.h > 0 ? r2(ws.net / ws.h) : null, osa_numbreid_esialgsed: ws.prov },
+    paevad: days, muud_kulud: exps, markused_ja_syndmused: evs, eelmised_nadalad: prev
+  };
+}
+function makeReview(m){
+  if (!sampleFn || revBusy) return;
+  var data = weekData(m);
+  if (!data.paevad.length) return;
+  revBusy = m; revErr = null; render();
+  var prompt = "Sa oled kogenud nõustaja sõidujagamise ja transfeeriteenuse juhile Harjumaal. Ta sõidab Boltis, Uberis, Forusel ja teeb eratransfeere. Auto on renditud (" + data.auto_rent + "). " +
+    "Allpool on tema ühe nädala andmed JSON-ina ja võrdluseks eelmised nädalad. Summad on eurodes, 'puhaskasum' on pärast kütust, renti ja muid kulusid, aga enne makse. " +
+    "Kirjuta lühike ja konkreetne ülevaade eesti keeles: sõbralik, otsekohene, numbritega. Kasuta ainult neid andmeid, ära mõtle midagi juurde. Kui andmeid on vähe, ütle seda. " +
+    "Vasta AINULT ühe JSON-objektiga kujul {\"pealkiri\": \"üks lause üldhinnanguga\", \"hasti\": [\"1–3 lühikest lauset, mis läks hästi\"], \"kaotus\": [\"1–3 lühikest lauset, kus kaotas raha või aega\"], \"jargmine\": [\"2–3 konkreetset soovitust järgmiseks nädalaks\"]}.\n\nANDMED:\n" + JSON.stringify(data);
+  sampleFn.json(prompt, { cache: false }).then(function(o){
+    revBusy = null;
+    var arr = function(v){ return Array.isArray(v) ? v.filter(function(s){ return typeof s === "string" && s.trim(); }).slice(0, 4) : []; };
+    var rec = { id: dateKey(m), t: now(), title: typeof o.pealkiri === "string" ? o.pealkiri : "", good: arr(o.hasti), lost: arr(o.kaotus), next: arr(o.jargmine), net: data.kokku.puhaskasum };
+    if (!rec.title && !rec.good.length && !rec.next.length){ revErr = "Ülevaadet ei õnnestunud koostada. Proovi uuesti."; render(); return; }
+    put("reviews", rec.id, rec);
+  }, function(e){
+    revBusy = null;
+    var c = e && e.code;
+    revErr = c === "not_granted" ? "Ülevaate jaoks on vaja luba. Vajuta uuesti ja luba see." : c === "rate_limited" ? "Liiga palju päringuid. Proovi mõne minuti pärast." : "Ülevaadet ei õnnestunud koostada. Kontrolli levi ja proovi uuesti.";
+    render();
+  });
+}
+function viewReview(){
+  var m = revM, cur = mondayOf(now()), ws = weekSummary(m), rv = (S.reviews || {})[dateKey(m)];
+  var h = '<section class="rep rev" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+    '<button class="btn small" data-act="rprev" aria-label="Eelmine nädal">‹</button><div style="text-align:center"><div class="rh">Nädala ülevaade</div><div class="rs">' + rangeLabel(m) + '</div></div>' +
+    '<button class="btn small" data-act="rnext" aria-label="Järgmine nädal"' + (m >= cur ? " disabled" : "") + '>›</button></div>';
+  if (revBusy === m){
+    h += '<p class="hint" style="margin-top:12px" role="status">Koostan ülevaadet, see võtab umbes poole minuti…</p>';
+  } else if (rv){
+    var li = function(a){ return '<ul>' + a.map(function(s){ return "<li>" + esc(s) + "</li>"; }).join("") + '</ul>'; };
+    h += (rv.title ? '<p class="rvt">' + esc(rv.title) + '</p>' : "") +
+      (rv.good.length ? '<h3>Läks hästi</h3>' + li(rv.good) : "") +
+      (rv.lost.length ? '<h3>Kus raha kaotasid</h3>' + li(rv.lost) : "") +
+      (rv.next.length ? '<h3>Järgmisel nädalal</h3>' + li(rv.next) : "") +
+      '<p class="hint">Koostatud ' + dm(rv.t) + " " + hm(rv.t) + '. Kontrolli soovitusi oma kogemuse põhjal.</p>' +
+      (sampleFn ? '<button class="btn small full" data-act="rmake">Koosta uuesti</button>' : "");
+  } else if (!ws.days){
+    h += '<p class="hint" style="margin-top:12px">Sel nädalal pole tööpäevi.</p>';
+  } else if (!sampleFn){
+    h += '<p class="hint" style="margin-top:12px">Ülevaade on saadaval, kui oled sisse logitud.</p>';
+  } else {
+    h += '<p class="hint" style="margin-top:12px">' + ws.days + " tööpäeva, " + eur(ws.inc) + " tulu." + (m >= cur ? " Nädal pole veel läbi, parim on ülevaade teha esmaspäeval." : "") + '</p>' +
+      '<button class="btn primary full" data-act="rmake">✨ Koosta ülevaade</button>';
+  }
+  if (revErr && revBusy !== m) h += '<p class="err">' + esc(revErr) + '</p>';
+  return h + '</section>';
+}
+function reviewNudge(){
+  if (!sampleFn) return "";
+  var lm = addDays(mondayOf(now()), -7);
+  if ((S.reviews || {})[dateKey(lm)] || !weekSummary(lm).days) return "";
+  return '<div class="goal"><p>Eelmise nädala (' + rangeLabel(lm) + ') ülevaade on koostamata. <button data-act="revgo">Koosta ülevaade</button></p></div>';
+}
+function detailHtml(r, title, sub){
+  var src = Object.keys(r.bySrc).sort(function(x, y){ return r.bySrc[y] - r.bySrc[x]; }).map(function(k){ return '<tr class="sub"><td>' + esc(k) + '</td><td class="num">' + eur(r.bySrc[k]) + '</td></tr>'; }).join("");
+  var dayLine = function(d, lbl){ return d ? '<tr><td>' + lbl + '</td><td class="num"><button class="btn small" data-act="report" data-w="' + d.id + '">' + nice(d.s) + ", " + perH(d.netH) + '</button></td></tr>' : ""; };
+  return '<div class="rep"><div class="rh">' + title + '</div><div class="rs">' + sub + (r.prov ? ", osa numbreid esialgsed" : "") + '</div>' +
+    '<div class="final"><div><b class="num ' + (r.net < 0 ? "neg" : "pos") + '">' + (r.unknown ? "–" : eur(r.net)) + '</b><span>tegelik teenistus</span></div><div><b class="num">' + perH(r.netH) + '</b><span>' + perKm(r.netKm) + '</span></div></div>' +
+    '<table><tr><td>Töötunnid</td><td class="num">' + dur(r.h * HOUR) + '</td></tr><tr><td>Tööpäevi</td><td class="num">' + r.days + '</td></tr><tr><td>Läbisõit</td><td class="num">' + kmf(r.km) + '</td></tr>' +
+    '<tr class="tot"><td>Tulu</td><td class="num">' + eur(r.inc) + '</td></tr>' + src +
+    (r.days ? '<tr class="sub"><td>keskmine päevas</td><td class="num">' + eur(r.inc / r.days) + '</td></tr>' : "") +
+    '<tr><td>Kütus' + (r.fuelEst ? " (hinnang)" : "") + '</td><td class="num">− ' + eur(r.fuel) + '</td></tr>' +
+    (r.liters ? '<tr class="sub"><td>tangitud ' + nf2.format(r.liters) + ' l, makstud ' + eur2(r.fuelPaid) + '</td><td class="num">' + (r.lp100 != null ? nf2.format(r.lp100) + " l/100" : "") + '</td></tr>' : (r.lp100 != null ? '<tr class="sub"><td>keskmine kulu</td><td class="num">' + nf2.format(r.lp100) + ' l/100</td></tr>' : "")) +
+    '<tr><td>Rent nädalatasust</td><td class="num">− ' + eur(r.fixRent) + '</td></tr><tr><td>Rent km-tasust</td><td class="num">− ' + eur(r.kmRent) + '</td></tr>' +
+    '<tr class="sub"><td>rent kokku</td><td class="num">' + eur(r.rent) + '</td></tr>' +
+    '<tr><td>Muud kulud</td><td class="num">− ' + eur(r.other) + '</td></tr>' +
+    '<tr class="tot"><td>Otsesed kulud kokku</td><td class="num">' + eur(r.costs) + '</td></tr>' +
+    dayLine(r.best, "Parim päev") + (r.worst && r.best && r.worst.id !== r.best.id ? dayLine(r.worst, "Nõrgim päev") : "") +
+    '</table>' + (r.best ? '<p class="hint">Parim ja nõrgim päev tegeliku tunnitasu järgi, arvesse lähevad lõpetatud vähemalt 1-tunnised päevad.</p>' : "") + '</div>';
+}
+function sheetWeek(m){
+  memo = {};
+  var r = rangeDetail(m, addDays(m, 7));
+  openSheet("Nädala kokkuvõte", detailHtml(r, rangeLabel(m), "Esmaspäev–pühapäev"), function(p){
+    p.addEventListener("click", function(ev){ var b = ev.target.closest('[data-act="report"]'); if (b) sheetReport(b.dataset.w); });
+  });
+}
+function sheetMonthDetail(){
+  memo = {};
+  var r = rangeDetail(new Date(histY, histM, 1).getTime(), new Date(histY, histM + 1, 1).getTime());
+  openSheet("Kuu kokkuvõte", detailHtml(r, cap(MONL[histM]) + " " + histY, "Rendinädal jaotub kuude vahel tegelike töötundide järgi"), function(p){
+    p.addEventListener("click", function(ev){ var b = ev.target.closest('[data-act="report"]'); if (b) sheetReport(b.dataset.w); });
+  });
+}
+function chartsCard(){
+  var cur = mondayOf(now()), weeks = [];
+  for (var i = 7; i >= 0; i--){
+    var m = addDays(cur, -7 * i), r = rangeDetail(m, addDays(m, 7));
+    weeks.push({ m: m, inc: r.inc, costs: r.costs, netH: r.netH, days: r.days });
+  }
+  var used = weeks.filter(function(w){ return w.days; });
+  if (used.length < 2) return '<div class="sec"><h2>Graafikud</h2><div class="list"><div class="empty">Graafikud ilmuvad, kui sul on vähemalt kahe nädala andmed.</div></div></div>';
+  var W = 340, H = 150, padL = 36, padB = 22, padT = 10, cw = (W - padL - 6) / weeks.length;
+  var maxE = Math.max.apply(null, weeks.map(function(w){ return Math.max(w.inc, w.costs); })) || 1;
+  var ys = function(v){ return padT + (H - padT - padB) * (1 - v / maxE); };
+  var bars = weeks.map(function(w, i){
+    var x = padL + i * cw, bw = cw * 0.36;
+    var lab = '<text x="' + (x + cw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" class="ax">' + new Date(w.m).getDate() + "." + (new Date(w.m).getMonth() + 1) + '</text>';
+    if (!w.days) return lab;
+    return '<rect x="' + (x + cw * 0.12) + '" y="' + ys(w.inc) + '" width="' + bw + '" height="' + (ys(0) - ys(w.inc)) + '" rx="2" fill="var(--hero)"><title>Tulu ' + eur(w.inc) + '</title></rect>' +
+      '<rect x="' + (x + cw * 0.52) + '" y="' + ys(w.costs) + '" width="' + bw + '" height="' + (ys(0) - ys(w.costs)) + '" rx="2" fill="var(--cost)"><title>Kulud ' + eur(w.costs) + '</title></rect>' + lab;
+  }).join("");
+  var axis = '<line x1="' + padL + '" x2="' + W + '" y1="' + ys(0) + '" y2="' + ys(0) + '" stroke="var(--line)"/>' +
+    '<text x="' + (padL - 4) + '" y="' + (ys(maxE) + 4) + '" text-anchor="end" class="ax">' + nf0.format(maxE) + '</text><text x="' + (padL - 4) + '" y="' + (ys(0)) + '" text-anchor="end" class="ax">0</text>';
+  var rates = weeks.map(function(w){ return w.days && w.netH != null ? w.netH : null; });
+  var vals = rates.filter(function(v){ return v != null; });
+  var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max.apply(null, vals) || 1;
+  var yr = function(v){ return padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo || 1)); };
+  var pts = [], dots = "";
+  rates.forEach(function(v, i){ if (v == null) return; var x = padL + i * cw + cw / 2; pts.push(x + "," + yr(v)); dots += '<circle cx="' + x + '" cy="' + yr(v) + '" r="3.5" fill="var(--amber)"><title>' + perH(v) + '</title></circle><text x="' + x + '" y="' + (yr(v) - 8) + '" text-anchor="middle" class="ax">' + nf0.format(v) + '</text>'; });
+  var labs = weeks.map(function(w, i){ return '<text x="' + (padL + i * cw + cw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" class="ax">' + new Date(w.m).getDate() + "." + (new Date(w.m).getMonth() + 1) + '</text>'; }).join("");
+  var zero = lo < 0 ? '<line x1="' + padL + '" x2="' + W + '" y1="' + yr(0) + '" y2="' + yr(0) + '" stroke="var(--line)" stroke-dasharray="3 3"/>' : "";
+  return '<div class="sec"><h2>Graafikud, viimased 8 nädalat</h2><section class="rep">' +
+    '<div class="rh" style="font-size:1rem">Tulu ja kulud nädalas (€)</div>' +
+    '<div class="rs" style="font-size:.85rem"><span style="color:var(--hero)">■</span> tulu &nbsp; <span style="color:var(--cost)">■</span> otsesed kulud</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Nädala tulu ja kulud">' + axis + bars + '</svg>' +
+    '<div class="rh" style="font-size:1rem;margin-top:14px">Tegelik €/h nädalas</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Tegelik tunnitasu nädalas">' + zero +
+    (pts.length > 1 ? '<polyline points="' + pts.join(" ") + '" fill="none" stroke="var(--amber)" stroke-width="2.5"/>' : "") + dots + labs + '</svg>' +
+    '<p class="hint">Nädala alguse kuupäev all. Pooleli oleva nädala numbrid on esialgsed.</p></section></div>';
+}
+function viewHistory(){
+  var wds = workdaysSorted().reverse(), h = viewReview() + viewMonth() + kmLimitsCard() + rateCard(histY, histM, monthSummary(histY, histM)) + chartsCard();
+  if (!wds.length) h += '<div class="list"><div class="empty">Ajalugu tekib, kui lõpetad esimese tööpäeva.</div></div>';
+  var lastWeek = null;
+  wds.forEach(function(w){
+    var m = mondayOf(w.s);
+    if (m !== lastWeek){
+      if (lastWeek !== null) h += "</div>";
+      var s = weekSummary(m);
+      h += '<button class="weekhead" data-act="week" data-m="' + m + '"><b>' + rangeLabel(m) + ' ›</b><span class="num">' + eur(s.inc) + " tulu, " + (s.unknown ? "–" : eur(s.net)) + " tegelik, " + nf0.format(Math.round(s.h * 10) / 10) + " h" + (s.prov ? " (esialgne)" : "") + '</span></button><div class="list">';
+      lastWeek = m;
+    }
+    var c = calc(w);
+    h += '<button class="item" data-act="report" data-w="' + w.id + '"><div class="l"><b>' + nice(w.s) + (w.e ? "" : '<span class="tag">käib</span>') + '</b><span class="num">' + hm(w.s) + "–" + (w.e ? hm(w.e) : "…") + ", " + dur(workedMs(w)) + ", " + kmf(c.km) + '</span></div><div class="r"><b class="num">' + eur(c.inc) + '</b><span class="num">' + perH(c.netH) + '</span></div></button>';
+  });
+  if (lastWeek !== null) h += "</div>";
+  var evs = Object.values(S.events).sort(function(a, b){ return (b.date + (b.s || "")).localeCompare(a.date + (a.s || "")); });
+  h += '<div class="sec"><h2>Sündmused ja märkused</h2><div class="list">' + (evs.length ? evs.map(function(e){
+    return '<button class="item" data-act="editevent" data-id="' + e.id + '"><div class="l"><b>' + esc(e.date.split("-").reverse().slice(0, 2).join(".")) + (e.s ? " " + esc(e.s) + (e.e ? "–" + esc(e.e) : "") : "") + '</b><span>' + esc((e.tags || []).join(", ")) + (e.text ? (e.tags && e.tags.length ? ". " : "") + esc(e.text) : "") + '</span></div></button>';
+  }).join("") : '<div class="empty">Märgi siia lumi, kontserdid ja muud erilised päevad. Hiljem näed, kuidas need tulu mõjutasid.</div>') + '</div>' +
+    '<div class="actions"><button class="btn big" data-act="event">+ Märkus või sündmus</button></div></div>';
+  return h;
+}
+
+function fuelCard(){
+  var segs = fuelSegments(), rf = recentFuel();
+  var h = '<div class="sec"><h2>Tegelik kütusekulu</h2>';
+  if (!rf){
+    return h + '<div class="list"><div class="empty">Tangi kaks korda järjest täis ja sisesta mõlemal korral odomeetri näit. Siis arvutab äpp sinu tegeliku kulu. Seni kasutatakse seadetes olevat ' + perKm(settings().fuelPerKm) + '.</div></div></div>';
+  }
+  h += '<section class="rep"><div class="final" style="margin-top:0"><div><b class="num">' + nf2.format(rf.lp100) + '</b><span>l/100 km</span></div><div><b class="num">' + nf3.format(rf.ekm) + '</b><span>€/km</span></div></div>' +
+    '<p class="hint">Viimase ' + (rf.n === 1 ? "täispaagi" : rf.n + " täispaagi") + ' põhjal, ' + kmf(rf.km) + '. Seda kasutatakse päevade kütusekulu arvutamisel.</p>';
+  h += '<table>' + segs.slice(-6).reverse().map(function(x){
+    return '<tr><td>' + dm(x.fromT) + "–" + dm(x.toT) + '<br><span class="num" style="font-size:.85rem;opacity:.75">' + kmf(x.km) + ", " + nf2.format(x.l) + " l, " + eur(x.cost) + '</span></td><td class="num"><b>' + nf2.format(x.lp100) + ' l/100</b><br><span style="font-size:.85rem;opacity:.75">' + nf3.format(x.ekm) + ' €/km</span></td></tr>';
+  }).join("") + '</table></section>';
+  return h + '<p class="note">Osalised tankimised arvestatakse järgmise täispaagi sisse. CNG (kg) jääb sellest arvutusest välja.</p></div>';
+}
+function viewCar(){
+  var fs = Object.values(S.fuel).sort(function(a, b){ return b.t - a.t; });
+  var xs = Object.values(S.expenses).sort(function(a, b){ return b.t - a.t; });
+  var h = '<div class="actions" style="margin-top:0"><button class="btn primary" data-act="fuel">⛽ Tankisin</button><button class="btn" data-act="expense">+ Kulu</button></div>';
+  h += '<div class="sec"><h2>Tankimised</h2><div class="list">' + (fs.length ? fs.map(function(f){
+    return '<button class="item" data-act="editfuel" data-id="' + f.id + '"><div class="l"><b>' + dmy(f.t) + " " + hm(f.t) + (f.rc ? " 🧾" : "") + '</b><span>' + fuelType(f) + ", " + (f.full ? "täispaak" : "osaline") + ", " + nf0.format(f.odo) + " km" + (f.station ? ", " + esc(f.station) : "") + '</span></div><div class="r"><b class="num">' + eur(f.sum) + '</b><span class="num">' + nf2.format(f.l) + " " + fuelUnit(fuelType(f)) + ", " + nf3.format(f.price || f.sum / f.l) + " €/" + fuelUnit(fuelType(f)) + '</span></div></button>';
+  }).join("") : '<div class="empty">Tankimisi pole veel lisatud.</div>') + '</div>' +
+  '</div>' + fuelCard();
+  h += '<div class="sec"><h2>Muud autokulud</h2><div class="list">' + (xs.length ? xs.map(function(x){
+    return '<button class="item" data-act="editexpense" data-id="' + x.id + '"><div class="l"><b>' + esc(x.cat) + (x.rc ? " 🧾" : "") + '</b><span>' + dmy(x.t) + (x.cat === "Parkimine" && x.phone ? ", telefoniga" : "") + (x.note ? ", " + esc(x.note) : "") + '</span></div><div class="r"><b class="num">' + eur(x.amt) + '</b></div></button>';
+  }).join("") : '<div class="empty">Kulusid pole veel lisatud.</div>') + '</div></div>';
+  return h;
+}
+
+function viewSettings(){
+  var st = settings();
+  var terms = st.rentTerms.slice().sort(function(a, b){ return a.from < b.from ? 1 : -1; });
+  return '<div class="stack">' +
+    '<div class="sec" style="margin-top:0"><h2>Arvutus</h2><div class="list" style="padding:4px 14px">' +
+      '<label class="fld"><span>Kütuse kulu €/km (varuväärtus)</span><input id="s-fuel" inputmode="decimal" value="' + nf2.format(st.fuelPerKm).replace(/\s/g, "") + '"></label>' +
+      '<p class="hint">Näiteks 5,5 l/100 km × 1,65 €/l ≈ 0,09 €/km. Seda kasutatakse ainult seni, kuni täispaak→täispaak andmeid pole.</p>' +
+      '<label class="fld"><span>Eeldatav töötundide arv nädalas</span><input id="s-hours" inputmode="decimal" value="' + st.expectedHours + '"></label>' +
+      '<p class="hint">Selle järgi jaotatakse 210 € nädalarent pooleli oleva nädala päevadele. Kui sul on varasemate nädalate andmed, kasutatakse nende keskmist (praegu ' + nf2.format(expectedHours()) + ' h). Esmaspäeval arvutatakse lõplik jaotus tegelike tundide järgi.</p>' +
+      '<label class="fld"><span>Kuu puhaskasumi eesmärk (€)</span><input id="s-goal" inputmode="decimal" placeholder="nt 2000" value="' + (st.monthGoal ? st.monthGoal : "") + '"></label>' +
+      '<p class="hint">Jäta tühjaks, kui eesmärki ei soovi. Edenemine on näha Täna ja Ajaloo vaates.</p>' +
+      '<button class="btn primary full" id="s-save">Salvesta seaded</button><div class="err"></div>' +
+    '</div></div>' +
+    '<div class="sec"><h2>Renditingimused</h2><div class="list">' + terms.map(function(t){
+      return '<div class="item" style="cursor:default"><div class="l"><b>Alates ' + esc(t.from.split("-").reverse().join(".")) + '</b><span>' + eur(t.weekly) + " nädalas + " + nf2.format(t.perKm) + ' €/km</span></div></div>';
+    }).join("") + '</div><div class="actions"><button class="btn big" data-act="newterms">Lisa uued tingimused</button></div>' +
+    '<p class="note">Kui rendihind muutub, lisa uued tingimused koos kuupäevaga. Varasemad nädalad arvutatakse edasi vanade tingimustega.</p></div>' +
+    '<div class="sec"><h2>Andmed</h2><div class="list" style="padding:12px 14px">' +
+      (downloads ? '<div class="toggle"><button class="btn small" data-exp="days">Tööpäevad</button><button class="btn small" data-exp="income">Tulud</button><button class="btn small" data-exp="fuel">Tankimised</button><button class="btn small" data-exp="expenses">Kulud</button><button class="btn small" data-exp="events">Sündmused</button></div><p class="hint">Iga nupp salvestab CSV-faili, mis avaneb Excelis ja Google Sheetsis.</p>'
+        : '<p class="hint">Eksport pole selles brauseris saadaval.</p>') +
+      '<p class="hint">' + (mode === "sync" ? "Andmed salvestuvad sinu Driver Profiti andmebaasi ja on nähtavad ainult sulle. Levita tehtud sisestused saadetakse ära, kui levi tagasi tuleb." : "Andmed salvestuvad praegu ainult selles seadmes.") + '</p>' +
+      (lastErr ? '<p class="err">' + esc(lastErr) + '</p>' : "") +
+    '</div></div>' + accountHtml() + '</div>';
+}
+function mountSettings(){
+  mountAccount();
+  var b = $("#s-save"); if (!b) return;
+  b.onclick = function(){
+    var p = b.parentNode, f = parseNum($("#s-fuel").value), hrs = parseNum($("#s-hours").value);
+    if (f == null || f < 0 || f > 1){ setErr(p, "Kütuse kulu peab olema 0 ja 1 €/km vahel."); return; }
+    if (hrs == null || hrs <= 0 || hrs > 168){ setErr(p, "Nädala töötunnid peavad olema 1 ja 168 vahel."); return; }
+    var g = parseNum($("#s-goal").value);
+    if (g != null && (g < 0 || g > 100000)){ setErr(p, "Eesmärk peab olema 0 ja 100 000 € vahel."); return; }
+    var st = settings(); st.fuelPerKm = f; st.expectedHours = hrs; st.monthGoal = g || 0;
+    put("settings", "settings", st); toast("Seaded salvestatud");
+  };
+  $$("[data-exp]").forEach(function(x){ x.onclick = function(){ exportCsv(x.dataset.exp); }; });
+}
+
+// ---------- Lehed (vormid) ----------
+function sheetStart(){
+  var t0 = now(), last = lastOdo();
+  openSheet("Alusta tööpäeva",
+    '<p class="hint">Algusaeg: ' + cap(wdName(t0)) + " " + dmy(t0) + ", " + hm(t0) + '</p>' +
+    '<label class="fld"><span>Alguse odomeeter (km)</span><input id="f-odo" class="amt" inputmode="numeric" autocomplete="off" value="' + (last != null ? last : "") + '"></label>' +
+    (last != null ? '<p class="hint">Eeltäidetud viimase teadaoleva näiduga. Kontrolli üle.</p>' : "") +
+    '<div class="err"></div><button class="btn primary big" id="f-save">Alusta</button>',
+    function(p){
+      var i = $("#f-odo", p); i.focus(); i.select();
+      $("#f-save", p).onclick = function(){
+        var v = parseNum(i.value);
+        if (v == null || v < 0){ setErr(p, "Sisesta odomeetri näit."); return; }
+        var id = uid8();
+        put("workdays", id, { id: id, s: t0, e: null, os: Math.round(v), oe: null, pauses: [], periods: [] });
+        closeSheet(); toast("Tööpäev algas");
+      };
+    });
+}
+function sheetEnd(w){
+  var t0 = now();
+  openSheet("Lõpeta tööpäev",
+    '<p class="hint">Lõpuaeg ' + hm(t0) + ". Töötatud " + dur(workedMs(w)) + '.</p>' +
+    '<label class="fld"><span>Lõpu odomeeter (km)</span><input id="f-odo" class="amt" inputmode="numeric" autocomplete="off"></label>' +
+    '<p class="hint">Alguse näit oli ' + nf0.format(w.os) + ' km.</p><div class="err"></div>' +
+    '<button class="btn primary big" id="f-save">Lõpeta ja näita raportit</button>',
+    function(p){
+      var i = $("#f-odo", p); i.focus();
+      $("#f-save", p).onclick = function(){
+        var v = parseNum(i.value);
+        if (v == null){ setErr(p, "Sisesta lõpu odomeetri näit."); return; }
+        if (v < w.os){ setErr(p, "Lõpu näit ei saa olla väiksem kui alguse näit (" + nf0.format(w.os) + " km)."); return; }
+        if (v - w.os > 1500){ setErr(p, "Läbisõit tuleks üle 1500 km. Kontrolli näitu."); return; }
+        var nw = clone(w); nw.e = t0; nw.oe = Math.round(v);
+        nw.pauses = (nw.pauses || []).map(function(x){ return x.e ? x : { s: x.s, e: t0 }; });
+        put("workdays", nw.id, nw); closeSheet(); sheetReport(nw.id);
+      };
+    });
+}
+function togglePause(w){
+  var nw = clone(w); nw.pauses = nw.pauses || [];
+  var open = nw.pauses.find(function(p){ return !p.e; });
+  if (open){ open.e = now(); toast("Töö jätkub"); } else { nw.pauses.push({ s: now(), e: null }); toast("Paus algas"); }
+  put("workdays", nw.id, nw);
+}
+
+function sheetIncome(w, pid, pre){
+  var editing = pid ? (w.periods || []).find(function(p){ return p.id === pid; }) : null;
+  var s, e, lines, odo = "";
+  if (editing){ s = editing.s; e = editing.e; lines = clone(editing.lines).map(function(l){ if (l.rate != null){ l.mode = "rate"; } return l; }); odo = editing.odo != null ? editing.odo : ""; }
+  else {
+    e = now();
+    var cands = [w.s].concat((w.periods || []).map(function(p){ return p.e; }), (w.pauses || []).filter(function(p){ return p.e; }).map(function(p){ return p.e; }));
+    s = Math.max.apply(null, cands.filter(function(x){ return x <= e; }));
+    lines = pre && pre.lines ? pre.lines.map(function(l){ return { src: l.src, amt: String(l.amt) }; }) : [{ src: lastSrc(), amt: "" }];
+    if (pre && pre.odo != null) odo = pre.odo;
+  }
+  function linesHtml(){
+    return lines.map(function(l, i){
+      return '<div class="line" data-i="' + i + '">' + (i > 0 ? '<button type="button" class="rm" data-rm="' + i + '">Eemalda</button>' : "") +
+        chips("src" + i, SOURCES, l.src) +
+        '<div class="row2" style="margin:6px 0 2px"><button type="button" class="btn small' + (l.mode !== "rate" ? " primary" : "") + '" data-mode="sum" data-mi="' + i + '">Summa €</button><button type="button" class="btn small' + (l.mode === "rate" ? " primary" : "") + '" data-mode="rate" data-mi="' + i + '">Tunnitasu €/h</button></div>' +
+        (l.mode === "rate"
+          ? '<label class="fld"><span>Tunnitasu (€/h)</span><input class="amt" data-amt="' + i + '" inputmode="decimal" autocomplete="off" value="' + (l.rate != null && l.rate !== "" ? String(l.rate).replace(".", ",") : "") + '"></label>'
+          : '<label class="fld"><span>Summa (€)</span><input class="amt" data-amt="' + i + '" inputmode="decimal" autocomplete="off" value="' + (l.amt !== "" && l.amt != null ? String(l.amt).replace(".", ",") : "") + '"></label>') + '</div>';
+    }).join("");
+  }
+  openSheet(editing ? "Muuda tuluperioodi" : "Lisa tulu",
+    '<div class="row2"><label class="fld"><span>Algus</span><input type="time" id="f-s" value="' + hm(s) + '"></label><label class="fld"><span>Lõpp</span><input type="time" id="f-e" value="' + hm(e) + '"></label></div>' +
+    '<div id="f-lines">' + linesHtml() + '</div>' +
+    '<button type="button" class="btn ghost small" id="f-add">+ Teine allikas samas perioodis</button>' +
+    '<label class="fld"><span>Odomeeter perioodi lõpus (valikuline)</span><input id="f-odo" inputmode="numeric" autocomplete="off" value="' + odo + '"></label>' +
+    '<p class="calc num" id="f-calc"></p><div class="warnbox" id="f-warn" hidden></div><div class="err"></div>' +
+    '<button class="btn primary big" id="f-save">Salvesta</button>' +
+    (editing ? '<div style="margin-top:10px"><button class="btn danger full" id="f-del">Kustuta periood</button></div>' : ""),
+    function(p){
+      function readLines(){
+        $$(".line", p).forEach(function(el){
+          var i = +el.dataset.i;
+          lines[i].src = chipVal($("[data-chips]", el)) || lines[i].src;
+          if (lines[i].mode === "rate") lines[i].rate = $("[data-amt]", el).value; else lines[i].amt = $("[data-amt]", el).value;
+        });
+      }
+      function lineAmt(l, hrs){
+        if (l.mode === "rate"){ var r = parseNum(l.rate); return r != null && hrs > 0 ? Math.round(r * hrs * 100) / 100 : null; }
+        return parseNum(l.amt);
+      }
+      function curHrs(){ var t = times(); return t ? periodHours(w, { s: t.s, e: t.e }) : 0; }
+      function times(){
+        var sv = $("#f-s", p).value, ev = $("#f-e", p).value;
+        if (!sv || !ev) return null;
+        var st = tsInWorkday(w, sv), et = tsInWorkday(w, ev);
+        if (et <= st) et = addDays(et, 1);
+        if (et - st > 20 * HOUR) return null;
+        return { s: st, e: et };
+      }
+      function update(){
+        readLines();
+        var t = times(), hh = t ? periodHours(w, { s: t.s, e: t.e }) : 0, total = lines.reduce(function(a, l){ return a + (lineAmt(l, hh) || 0); }, 0);
+        var c = $("#f-calc", p), wb = $("#f-warn", p), save = $("#f-save", p);
+        if (!t){ c.textContent = "Kontrolli algus- ja lõpuaega."; wb.hidden = true; save.disabled = true; return; }
+        var hrs = periodHours(w, { s: t.s, e: t.e });
+        c.textContent = "Kestus " + dur(hrs * HOUR) + (total > 0 && hrs > 0 ? ", " + eur(total) + " → " + perH(total / hrs) : "");
+        var clash = overlapsOther(w, t.s, t.e, editing && editing.id);
+        if (clash.length){
+          var mySrc = {}; lines.forEach(function(l){ mySrc[l.src] = 1; });
+          var same = clash.filter(function(q){ return (q.lines || []).some(function(l){ return mySrc[l.src]; }); });
+          var srcOf = function(q){ return (q.lines || []).map(function(l){ return l.src; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(" + "); };
+          wb.hidden = false;
+          if (same.length){
+            var c0 = same[0];
+            wb.innerHTML = "Sama platvorm (" + esc(srcOf(c0)) + ") on juba sisestatud ajal " + hm(c0.s) + "–" + hm(c0.e) + ". Muuda aegu või ava see periood ja paranda seal.";
+            save.disabled = true;
+          } else {
+            wb.innerHTML = "Kattub ajaga " + clash.map(function(q){ return hm(q.s) + "–" + hm(q.e) + " (" + esc(srcOf(q)) + ")"; }).join(", ") + ". See on korras, kui sõitsid mitme äpiga korraga: tööpäeva tunnid ei kahekordistu ja iga platvormi tunnitasu arvestatakse tema enda ajaga.";
+            save.disabled = false;
+          }
+        } else { wb.hidden = true; save.disabled = false; }
+      }
+      function redrawLines(){ $("#f-lines", p).innerHTML = linesHtml(); wireChips($("#f-lines", p), update); }
+      wireChips($("#f-lines", p), update);
+      p.addEventListener("input", update);
+      $("#f-lines", p).addEventListener("click", function(ev){
+        var md = ev.target.closest("[data-mode]");
+        if (md){
+          readLines(); var L = lines[+md.dataset.mi], hh = curHrs();
+          if (md.dataset.mode === "rate" && L.mode !== "rate"){ var a0 = parseNum(L.amt); L.rate = a0 != null && hh > 0 ? String(Math.round(a0 / hh * 100) / 100) : ""; L.mode = "rate"; }
+          else if (md.dataset.mode === "sum" && L.mode === "rate"){ var a1 = lineAmt(L, hh); L.amt = a1 != null ? String(a1) : ""; L.mode = "sum"; L.rate = null; }
+          redrawLines(); update(); var inp = $('[data-amt="' + md.dataset.mi + '"]', p); if (inp) inp.focus(); return;
+        }
+        var r = ev.target.closest("[data-rm]"); if (!r) return;
+        readLines(); lines.splice(+r.dataset.rm, 1); redrawLines(); update();
+      });
+      $("#f-add", p).onclick = function(){
+        readLines();
+        var used = lines.map(function(l){ return l.src; });
+        lines.push({ src: SOURCES.find(function(x){ return used.indexOf(x) < 0; }) || "Muu", amt: "" });
+        redrawLines(); update();
+        var ins = $$("[data-amt]", p); ins[ins.length - 1].focus();
+      };
+      $("#f-save", p).onclick = function(){
+        readLines();
+        var t = times(); if (!t){ setErr(p, "Kontrolli algus- ja lõpuaega."); return; }
+        var hs = periodHours(w, { s: t.s, e: t.e });
+        var ls = lines.map(function(l){ var o = { src: l.src, amt: lineAmt(l, hs) }; if (l.mode === "rate") o.rate = parseNum(l.rate); return o; }).filter(function(l){ return l.amt != null && l.amt > 0; });
+        if (!ls.length){ setErr(p, "Sisesta summa või tunnitasu."); return; }
+        var o = parseNum($("#f-odo", p).value);
+        if (o != null && o < w.os){ setErr(p, "Odomeetri näit ei saa olla väiksem kui tööpäeva alguse näit (" + nf0.format(w.os) + " km)."); return; }
+        var cur = activeWorkday();
+        var nw = clone(S.workdays[w.id] || w);
+        var per = { id: editing ? editing.id : uid8(), s: t.s, e: t.e, odo: o != null ? Math.round(o) : null, lines: ls };
+        nw.periods = (nw.periods || []).filter(function(x){ return x.id !== per.id; }).concat([per]).sort(function(a, b){ return a.s - b.s; });
+        lsSet("dp_lastsrc", ls[0].src);
+        put("workdays", nw.id, nw); closeSheet(); toast(editing ? "Periood muudetud" : "Tulu salvestatud");
+        if (editing && tab === "history") sheetReport(nw.id);
+      };
+      if (editing){
+        confirmTap($("#f-del", p), "Kustutan perioodi?", function(){
+          var old = clone(S.workdays[w.id]), nw = clone(S.workdays[w.id]); nw.periods = nw.periods.filter(function(x){ return x.id !== editing.id; });
+          put("workdays", nw.id, nw); closeSheet();
+          undoToast("Periood kustutatud", function(){ var cur = clone(S.workdays[old.id] || old), back = old.periods.filter(function(x){ return x.id === editing.id; })[0]; cur.periods = (cur.periods || []).filter(function(x){ return x.id !== editing.id; }).concat([back]).sort(function(a, b){ return a.s - b.s; }); put("workdays", cur.id, cur); });
+          if (tab === "history") sheetReport(nw.id);
+        });
+      }
+      if (pre){ if (pre.s) $("#f-s", p).value = pre.s; if (pre.e) $("#f-e", p).value = pre.e; }
+      update();
+      if (!editing && !pre){ var a = $("[data-amt]", p); a.focus(); }
+    });
+}
+
+function sheetFuel(id, pre){
+  var f = id ? S.fuel[id] : null, rcs = { id: f && f.rc || null, orig: f && f.rc || null };
+  openSheet(f ? "Muuda tankimist" : "Tankisin",
+    (f ? '<label class="fld"><span>Aeg</span><input type="datetime-local" id="f-t" value="' + toDTL(f.t) + '"></label>' : "") +
+    '<div class="chips" id="f-ft" role="group" aria-label="Kütuse liik">' + FUELS.map(function(x){ return '<button type="button" class="chip" data-ft="' + x + '" aria-pressed="' + (x === (f ? fuelType(f) : lastFuel())) + '">' + x + '</button>'; }).join("") + '</div>' +
+    '<div class="row2"><label class="fld"><span id="f-ll">Liitrid</span><input class="amt" id="f-l" inputmode="decimal" autocomplete="off" value="' + (f ? String(f.l).replace(".", ",") : "") + '"></label>' +
+    '<label class="fld"><span>Summa (€)</span><input class="amt" id="f-sum" inputmode="decimal" autocomplete="off" value="' + (f ? String(f.sum).replace(".", ",") : "") + '"></label></div>' +
+    '<label class="fld"><span id="f-pl">Kütuse hind (€/l)</span><input class="amt" id="f-p" inputmode="decimal" autocomplete="off" placeholder="1,809" value="' + (f && f.price ? String(f.price).replace(".", ",") : "") + '"></label>' +
+    '<p class="hint" id="f-hint">Täida kaks välja kolmest (liitrid, summa, hind), kolmanda arvutab äpp ise.</p>' +
+    '<label class="fld"><span>Odomeeter (km)</span><input id="f-odo" inputmode="numeric" autocomplete="off" value="' + (f ? f.odo : "") + '"></label>' +
+    '<div class="toggle">' + '<button type="button" class="chip" data-full="1" aria-pressed="' + (!f || f.full) + '">Täispaak</button><button type="button" class="chip" data-full="0" aria-pressed="' + (f ? !f.full : false) + '">Osaline</button></div>' +
+    '<label class="fld"><span>Tankla (valikuline)</span><input id="f-st" autocomplete="off" value="' + esc(f ? f.station || "" : "") + '"></label>' +
+    rcHtml(rcs) +
+    '<p class="calc num" id="f-calc"></p><div class="err"></div>' +
+    '<button class="btn primary big" id="f-save">Salvesta</button>' +
+    (f ? '<div style="margin-top:10px"><button class="btn danger full" id="f-del">Kustuta tankimine</button></div>' : ""),
+    function(p){
+      var full = !f || f.full, ft = f ? fuelType(f) : lastFuel();
+      function setFt(){
+        var u = fuelUnit(ft);
+        $("#f-ll", p).textContent = u === "kg" ? "Kilogrammid" : "Liitrid";
+        $("#f-pl", p).textContent = "Kütuse hind (€/" + u + ")";
+        $("#f-hint", p).textContent = "Täida kaks välja kolmest (" + (u === "kg" ? "kilogrammid" : "liitrid") + ", summa, hind), kolmanda arvutab äpp ise.";
+        $("#f-p", p).placeholder = { Bensiin: "1,809", Diisel: "1,699", LPG: "0,899", CNG: "1,499" }[ft];
+        upd();
+      }
+      $$("[data-ft]", p).forEach(function(b){ b.onclick = function(){ ft = b.dataset.ft; $$("[data-ft]", p).forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); }); setFt(); }; });
+      $$("[data-full]", p).forEach(function(b){ b.onclick = function(){ full = b.dataset.full === "1"; $$("[data-full]", p).forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); }); }; });
+      function vals(){
+        var l = parseNum($("#f-l", p).value), s = parseNum($("#f-sum", p).value), pr = parseNum($("#f-p", p).value);
+        if (!(l > 0) && s > 0 && pr > 0) l = Math.round(s / pr * 100) / 100;
+        if (!(s > 0) && l > 0 && pr > 0) s = Math.round(l * pr * 100) / 100;
+        if (!(pr > 0) && l > 0 && s > 0) pr = Math.round(s / l * 1000) / 1000;
+        return { l: l, s: s, pr: pr };
+      }
+      function upd(){ var v = vals(); $("#f-calc", p).textContent = v.l > 0 && v.s > 0 ? nf2.format(v.l) + " " + fuelUnit(ft) + " × " + nf3.format(v.pr) + " €/" + fuelUnit(ft) + " = " + eur2(v.s) : ""; }
+      rcs.kind = "fuel";
+      rcs.onRead = function(o){
+        var got = [], tot = numOk(o.total, 0.5, 500), li = numOk(o.liters, 0.5, 150), pr = numOk(o.price, 0.3, 5);
+        if (FUELS.indexOf(o.fuel) >= 0){ ft = o.fuel; $$("[data-ft]", p).forEach(function(x){ x.setAttribute("aria-pressed", String(x.dataset.ft === ft)); }); got.push(ft); }
+        if (li != null){ $("#f-l", p).value = String(li).replace(".", ","); got.push(nf2.format(li) + " " + fuelUnit(ft)); }
+        if (tot != null){ $("#f-sum", p).value = String(tot).replace(".", ","); got.push(eur2(tot)); }
+        if (pr != null){ $("#f-p", p).value = String(pr).replace(".", ","); }
+        if (o.shop && !$("#f-st", p).value.trim()) $("#f-st", p).value = String(o.shop).slice(0, 60);
+        var t = rcTs(o);
+        if (t != null){ if (f && $("#f-t", p)) $("#f-t", p).value = toDTL(t); else if (Math.abs(t - now()) > 3 * HOUR) rcs.readT = t; got.push(dm(t) + " " + hm(t)); }
+        setFt();
+        return got.length ? "Loetud: " + got.join(", ") + ". Kontrolli üle ja lisa odomeetri näit." : "Tšekilt ei leidnud andmeid. Täida väljad ise.";
+      };
+      if (pre){
+        if (FUELS.indexOf(pre.ft) >= 0){ ft = pre.ft; $$("[data-ft]", p).forEach(function(x){ x.setAttribute("aria-pressed", String(x.dataset.ft === ft)); }); }
+        var pv = function(sel, v, lo, hi){ v = numOk(v, lo, hi); if (v != null) $(sel, p).value = String(v).replace(".", ","); };
+        pv("#f-l", pre.l, 0.5, 150); pv("#f-sum", pre.sum, 0.5, 500); pv("#f-p", pre.price, 0.3, 5); pv("#f-odo", pre.odo, 1, 9999999);
+        if (pre.full === true || pre.full === false){ full = pre.full; $$("[data-full]", p).forEach(function(x){ x.setAttribute("aria-pressed", String((x.dataset.full === "1") === full)); }); }
+      }
+      p.addEventListener("input", upd); setFt(); wireReceipt(p, rcs);
+      if (!f && !pre) $("#f-l", p).focus();
+      $("#f-save", p).onclick = function(){
+        if (rcs.busy){ setErr(p, "Oota, pilt laeb veel üles."); return; }
+        var v = vals(), l = v.l, s = v.s, o = parseNum($("#f-odo", p).value);
+        if (!(l > 0) || !(s > 0)){ setErr(p, "Täida vähemalt kaks: " + (fuelUnit(ft) === "kg" ? "kilogrammid" : "liitrid") + ", summa või hind."); return; }
+        if (o == null || o < 0){ setErr(p, "Sisesta odomeetri näit."); return; }
+        var t = f ? (fromDTL($("#f-t", p).value) || f.t) : (rcs.readT || now());
+        var nid = f ? f.id : uid8();
+        lsSet("dp_lastfuel", ft);
+        var frec = { id: nid, t: t, ft: ft, l: l, sum: s, price: v.pr, odo: Math.round(o), full: full, station: $("#f-st", p).value.trim() };
+        if (rcs.id) frec.rc = rcs.id;
+        put("fuel", nid, frec); rcCommit(rcs);
+        closeSheet(); toast("Tankimine salvestatud");
+      };
+      if (f) confirmTap($("#f-del", p), "Kustutan tankimise?", function(){ var old = clone(f); del("fuel", f.id); closeSheet();
+        undoToast("Tankimine kustutatud", function(){ if (assets && rcs.id && rcs.id !== rcs.orig) assets.delete(rcs.id).catch(function(){}); put("fuel", old.id, old); }, function(){ rcDrop(rcs); }); });
+    });
+}
+
+function sheetExpense(id, pre){
+  var x = id ? S.expenses[id] : null, rcs = { id: x && x.rc || null, orig: x && x.rc || null };
+  openSheet(x ? "Muuda kulu" : "Lisa kulu",
+    (x ? '<label class="fld"><span>Aeg</span><input type="datetime-local" id="f-t" value="' + toDTL(x.t) + '"></label>' : "") +
+    chips("cat", EXP_CATS, x ? x.cat : null) +
+    '<label class="fld"><span>Summa (€)</span><input class="amt" id="f-amt" inputmode="decimal" autocomplete="off" value="' + (x ? String(x.amt).replace(".", ",") : "") + '"></label>' +
+    '<div id="f-phwrap" hidden><div class="toggle"><button type="button" class="chip" data-ph="1">Telefoniga</button><button type="button" class="chip" data-ph="0">Kaardi või sularahaga</button></div>' +
+    '<p class="hint">Telefoniga makstud parkimine tuleb telefoniarvele, aga see on ikkagi töö kulu ja läheb kasumist maha.</p></div>' +
+    '<label class="fld"><span>Märkus (valikuline)</span><input id="f-note" autocomplete="off" placeholder="nt lennujaam, ootasin klienti" value="' + esc(x ? x.note || "" : "") + '"></label>' + rcHtml(rcs) + '<div class="err"></div>' +
+    '<button class="btn primary big" id="f-save">Salvesta</button>' +
+    (x ? '<div style="margin-top:10px"><button class="btn danger full" id="f-del">Kustuta kulu</button></div>' : ""),
+    function(p){
+      var ph = x ? !!x.phone : (pre && (pre.phone === true || pre.phone === false)) ? pre.phone : lsGet("dp_parkphone") !== false;
+      if (pre){
+        if (pre.cat) $$('[data-chips] .chip', p).forEach(function(c){ c.setAttribute("aria-pressed", String(c.dataset.v === pre.cat)); });
+        var pa = numOk(pre.amt, 0.1, 2000); if (pa != null) $("#f-amt", p).value = String(pa).replace(".", ",");
+        if (pre.note) $("#f-note", p).value = String(pre.note).slice(0, 80);
+      }
+      function showPh(){
+        var on = chipVal($("[data-chips]", p)) === "Parkimine";
+        $("#f-phwrap", p).hidden = !on;
+        $$("[data-ph]", p).forEach(function(b){ b.setAttribute("aria-pressed", String((b.dataset.ph === "1") === ph)); });
+      }
+      $$("[data-ph]", p).forEach(function(b){ b.onclick = function(){ ph = b.dataset.ph === "1"; showPh(); }; });
+      rcs.kind = "expense";
+      rcs.onRead = function(o){
+        var got = [], tot = numOk(o.total, 0.1, 2000);
+        if (EXP_CATS.indexOf(o.category) >= 0){ $$('[data-chips] .chip', p).forEach(function(c){ c.setAttribute("aria-pressed", String(c.dataset.v === o.category)); }); showPh(); got.push(o.category); }
+        if (tot != null){ $("#f-amt", p).value = String(tot).replace(".", ","); got.push(eur2(tot)); }
+        if (o.shop && !$("#f-note", p).value.trim()) $("#f-note", p).value = String(o.shop).slice(0, 60);
+        var t = rcTs(o);
+        if (t != null){ if (x && $("#f-t", p)) $("#f-t", p).value = toDTL(t); else if (Math.abs(t - now()) > 3 * HOUR) rcs.readT = t; got.push(dm(t) + " " + hm(t)); }
+        return got.length ? "Loetud: " + got.join(", ") + ". Kontrolli üle ja vajuta Salvesta." : "Tšekilt ei leidnud andmeid. Täida väljad ise.";
+      };
+      wireChips(p, showPh); showPh(); wireReceipt(p, rcs);
+      $("#f-save", p).onclick = function(){
+        if (rcs.busy){ setErr(p, "Oota, pilt laeb veel üles."); return; }
+        var cat = chipVal($("[data-chips]", p)), a = parseNum($("#f-amt", p).value);
+        if (!cat){ setErr(p, "Vali kategooria."); return; }
+        if (!(a > 0)){ setErr(p, "Sisesta summa."); return; }
+        var t = x ? (fromDTL($("#f-t", p).value) || x.t) : (rcs.readT || now());
+        var nid = x ? x.id : uid8();
+        var rec = { id: nid, t: t, cat: cat, amt: a, note: $("#f-note", p).value.trim() };
+        if (cat === "Parkimine"){ rec.phone = ph; lsSet("dp_parkphone", ph); }
+        if (rcs.id) rec.rc = rcs.id;
+        put("expenses", nid, rec); rcCommit(rcs);
+        closeSheet(); toast("Kulu salvestatud");
+      };
+      if (x) confirmTap($("#f-del", p), "Kustutan kulu?", function(){ var old = clone(x); del("expenses", x.id); closeSheet();
+        undoToast("Kulu kustutatud", function(){ if (assets && rcs.id && rcs.id !== rcs.orig) assets.delete(rcs.id).catch(function(){}); put("expenses", old.id, old); }, function(){ rcDrop(rcs); }); });
+    });
+}
+
+function sheetEvent(id){
+  var e = id ? S.events[id] : null;
+  openSheet(e ? "Muuda sündmust" : "Märkus või sündmus",
+    '<label class="fld"><span>Kuupäev</span><input type="date" id="f-d" value="' + (e ? e.date : dateKey(now())) + '"></label>' +
+    '<div class="row2"><label class="fld"><span>Algus (valikuline)</span><input type="time" id="f-s" value="' + (e ? e.s || "" : "") + '"></label><label class="fld"><span>Lõpp (valikuline)</span><input type="time" id="f-e" value="' + (e ? e.e || "" : "") + '"></label></div>' +
+    chips("tags", TAGS, e ? e.tags : [], true) +
+    '<label class="fld"><span>Märkus</span><textarea id="f-text">' + esc(e ? e.text || "" : "") + '</textarea></label><div class="err"></div>' +
+    '<button class="btn primary big" id="f-save">Salvesta</button>' +
+    (e ? '<div style="margin-top:10px"><button class="btn danger full" id="f-del">Kustuta</button></div>' : ""),
+    function(p){
+      wireChips(p);
+      $("#f-save", p).onclick = function(){
+        var d = $("#f-d", p).value, tags = chipVals($("[data-chips]", p)), text = $("#f-text", p).value.trim();
+        if (!d){ setErr(p, "Vali kuupäev."); return; }
+        if (!tags.length && !text){ setErr(p, "Vali märgend või kirjuta märkus."); return; }
+        var nid = e ? e.id : uid8();
+        put("events", nid, { id: nid, date: d, s: $("#f-s", p).value || "", e: $("#f-e", p).value || "", tags: tags, text: text });
+        closeSheet(); toast("Salvestatud");
+      };
+      if (e) confirmTap($("#f-del", p), "Kustutan sündmuse?", function(){ var old = clone(e); del("events", e.id); closeSheet(); undoToast("Sündmus kustutatud", function(){ put("events", old.id, old); }); });
+    });
+}
+
+function sheetReport(wid){
+  memo = {};
+  var w = S.workdays[wid]; if (!w) return;
+  var c = calc(w), pauseMs = (w.pauses || []).reduce(function(a, p){ return a + ov(p.s, p.e != null ? p.e : now(), w.s, wdEnd(w)); }, 0);
+  var src = "", dayCostH = c.net != null && c.h > 0 ? (c.inc - c.net) / c.h : null;
+  var srcTable = Object.keys(c.bySrc).length ? '<div class="rep" style="margin-top:10px"><div class="rh">Platvormid täna</div><table>' + srcRows(srcStats([w]), dayCostH, false) + '</table></div>' : "";
+  var evs = Object.values(S.events).filter(function(e){ return e.date === dateKey(w.s); });
+  var ps = (w.periods || []).slice().sort(function(a, b){ return a.s - b.s; });
+  openSheet("Päeva raport",
+    '<div class="rep"><div class="rh">' + nice(w.s) + '</div><div class="rs num">' + hm(w.s) + " → " + (w.e ? hm(w.e) : "käib") + (pauseMs > 0 ? ", pausid " + dur(pauseMs) : "") + "<br>" + dur(workedMs(w)) + ", " + kmf(c.km) + (c.kmEst ? " (hinnang)" : "") + '</div>' +
+    "<table>" + src + '<tr class="tot"><td>Tulu</td><td class="num">' + eur(c.inc) + "</td></tr>" +
+    '<tr><td>Kütus' + (c.fuel != null ? " (hinnang)" : "") + '</td><td class="num">' + eur(c.fuel) + "</td></tr>" +
+    '<tr><td>Pesu ja muud</td><td class="num">' + eur(c.other) + "</td></tr>" +
+    '<tr><td>Rent' + (c.rentProv ? " (esialgne)" : "") + '</td><td class="num">' + eur(c.rent) + "</td></tr>" +
+    (c.kmRent != null ? '<tr class="sub"><td colspan="2">km-rent ' + eur2(c.kmRent) + " + fikseeritud osa " + eur2(c.fixedRent) + "</td></tr>" : "") +
+    '<tr class="tot"><td>Arvestatavad otsesed kulud</td><td class="num">' + eur(c.costs) + "</td></tr></table>" +
+    '<div class="final"><div><b class="num ' + (c.net != null && c.net < 0 ? "neg" : "pos") + '">' + eur(c.net) + '</b><span>tegelik teenistus</span></div><div><b class="num">' + perH(c.netH) + '</b><span>' + perKm(c.netKm) + "</span></div></div></div>" + srcTable.replace("Platvormid täna", "Platvormid sel päeval") +
+    (evs.length ? '<div class="sec"><h2>Sündmused</h2><div class="list">' + evs.map(function(e){ return '<div class="item" style="cursor:default"><div class="l"><b>' + (e.s ? esc(e.s) + (e.e ? "–" + esc(e.e) : "") : "Terve päev") + "</b><span>" + esc((e.tags || []).join(", ")) + (e.text ? " " + esc(e.text) : "") + "</span></div></div>"; }).join("") + "</div></div>" : "") +
+    '<div class="sec"><h2>Tuluperioodid</h2><div class="list">' + (ps.length ? ps.map(function(p){ return periodRow(w, p); }).join("") : '<div class="empty">Perioode pole.</div>') + "</div></div>" +
+    '<div class="actions"><button class="btn" id="r-add">+ Lisa periood</button><button class="btn" id="r-edit">Muuda aegu</button>' +
+    '<button class="btn danger big" id="r-del">Kustuta tööpäev</button></div>',
+    function(p){
+      p.addEventListener("click", function(ev){
+        var b = ev.target.closest('[data-act="editperiod"]'); if (b){ sheetIncome(S.workdays[wid], b.dataset.p); }
+      });
+      $("#r-add", p).onclick = function(){ sheetIncome(S.workdays[wid]); };
+      $("#r-edit", p).onclick = function(){ sheetEditDay(wid); };
+      confirmTap($("#r-del", p), "Kustutan kogu päeva?", function(){ var old = clone(S.workdays[wid]); del("workdays", wid); closeSheet(); undoToast("Tööpäev kustutatud", function(){ put("workdays", old.id, old); }); });
+    });
+}
+
+function sheetEditDay(wid){
+  var w = clone(S.workdays[wid]);
+  function pausesHtml(){
+    return (w.pauses || []).map(function(x, i){
+      return '<div class="line"><button type="button" class="rm" data-rmp="' + i + '">Eemalda</button><div class="row2"><label class="fld"><span>Paus algas</span><input type="datetime-local" data-ps="' + i + '" value="' + toDTL(x.s) + '"></label><label class="fld"><span>Paus lõppes</span><input type="datetime-local" data-pe="' + i + '" value="' + (x.e ? toDTL(x.e) : "") + '"></label></div></div>';
+    }).join("");
+  }
+  openSheet("Muuda tööpäeva",
+    '<label class="fld"><span>Algus</span><input type="datetime-local" id="f-s" value="' + toDTL(w.s) + '"></label>' +
+    (w.e ? '<label class="fld"><span>Lõpp</span><input type="datetime-local" id="f-e" value="' + toDTL(w.e) + '"></label>' : "") +
+    '<div class="row2"><label class="fld"><span>Alguse odomeeter</span><input id="f-os" inputmode="numeric" value="' + (w.os != null ? w.os : "") + '"></label>' +
+    (w.e ? '<label class="fld"><span>Lõpu odomeeter</span><input id="f-oe" inputmode="numeric" value="' + (w.oe != null ? w.oe : "") + '"></label>' : "") + '</div>' +
+    '<div class="sec" style="margin-top:12px"><h2>Pausid</h2><div id="f-pauses">' + pausesHtml() + '</div><button type="button" class="btn ghost small" id="f-addp">+ Lisa paus</button></div>' +
+    '<div class="err"></div><button class="btn primary big" id="f-save">Salvesta</button>',
+    function(p){
+      function readP(){
+        $$("[data-ps]", p).forEach(function(i){ w.pauses[+i.dataset.ps].s = fromDTL(i.value); });
+        $$("[data-pe]", p).forEach(function(i){ w.pauses[+i.dataset.pe].e = fromDTL(i.value); });
+      }
+      $("#f-pauses", p).addEventListener("click", function(ev){
+        var r = ev.target.closest("[data-rmp]"); if (!r) return;
+        readP(); w.pauses.splice(+r.dataset.rmp, 1); $("#f-pauses", p).innerHTML = pausesHtml();
+      });
+      $("#f-addp", p).onclick = function(){
+        readP(); var base = w.e || now();
+        w.pauses.push({ s: base - 30 * MIN, e: base - 15 * MIN });
+        $("#f-pauses", p).innerHTML = pausesHtml();
+      };
+      $("#f-save", p).onclick = function(){
+        readP();
+        var s = fromDTL($("#f-s", p).value), e = w.e ? fromDTL($("#f-e", p).value) : null;
+        var os = parseNum($("#f-os", p).value), oe = w.e ? parseNum($("#f-oe", p).value) : null;
+        if (!s){ setErr(p, "Algusaeg on puudu."); return; }
+        if (w.e && (!e || e <= s)){ setErr(p, "Lõpp peab olema pärast algust."); return; }
+        if (os == null){ setErr(p, "Alguse odomeeter on puudu."); return; }
+        if (w.e && (oe == null || oe < os)){ setErr(p, "Lõpu odomeeter peab olema vähemalt alguse näit."); return; }
+        var end = e || now();
+        for (var i = 0; i < w.pauses.length; i++){
+          var x = w.pauses[i];
+          if (!x.s || (x.e && x.e <= x.s)){ setErr(p, "Kontrolli pausi " + (i + 1) + " aegu."); return; }
+          if (x.s < s || (x.e || x.s) > end){ setErr(p, "Paus " + (i + 1) + " peab jääma tööpäeva sisse."); return; }
+        }
+        w.s = s; w.e = e; w.os = Math.round(os); w.oe = oe != null ? Math.round(oe) : null;
+        w.pauses.sort(function(a, b){ return a.s - b.s; });
+        put("workdays", w.id, w); closeSheet(); toast("Tööpäev muudetud");
+        if (w.e) sheetReport(w.id);
+      };
+    });
+}
+
+function sheetTerms(){
+  var t = termsAt(now());
+  openSheet("Uued renditingimused",
+    '<label class="fld"><span>Kehtib alates</span><input type="date" id="f-from" value="' + dateKey(mondayOf(now())) + '"></label>' +
+    '<div class="row2"><label class="fld"><span>Nädalatasu (€)</span><input id="f-w" inputmode="decimal" value="' + String(t.weekly).replace(".", ",") + '"></label>' +
+    '<label class="fld"><span>Km-tasu (€/km)</span><input id="f-k" inputmode="decimal" value="' + String(t.perKm).replace(".", ",") + '"></label></div>' +
+    '<p class="hint">Rendinädal algab esmaspäeval, seega vali kuupäevaks esmaspäev.</p><div class="err"></div><button class="btn primary big" id="f-save">Salvesta</button>',
+    function(p){
+      $("#f-save", p).onclick = function(){
+        var from = $("#f-from", p).value, wk = parseNum($("#f-w", p).value), k = parseNum($("#f-k", p).value);
+        if (!from){ setErr(p, "Vali kuupäev."); return; }
+        if (wk == null || wk < 0 || k == null || k < 0){ setErr(p, "Kontrolli summasid."); return; }
+        var st = settings(); st.rentTerms = st.rentTerms.filter(function(x){ return x.from !== from; }).concat([{ from: from, weekly: wk, perKm: k }]);
+        put("settings", "settings", st); closeSheet(); toast("Tingimused salvestatud");
+      };
+    });
+}
+
+// ---------- Eksport ----------
+function csv(rows){
+  return "\ufeff" + rows.map(function(r){
+    return r.map(function(v){
+      if (v == null) v = ""; else if (typeof v === "number") v = String(Math.round(v * 100) / 100).replace(".", ","); else v = String(v);
+      return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }).join(";");
+  }).join("\r\n");
+}
+function exportCsv(kind){
+  memo = {};
+  var rows, name;
+  if (kind === "days"){
+    name = "tooaevad";
+    rows = [["Kuupäev", "Nädalapäev", "Algus", "Lõpp", "Töötunnid", "Km", "Tulu €", "Kütus €", "Muud kulud €", "Rent €", "Kulud kokku €", "Tegelik teenistus €", "Tegelik €/h", "Tegelik €/km", "Esialgne"]];
+    workdaysSorted().forEach(function(w){ var c = calc(w); rows.push([dmy(w.s), wdName(w.s), hm(w.s), w.e ? hm(w.e) : "", c.h, c.km, c.inc, c.fuel, c.other, c.rent, c.costs, c.net, c.netH, c.netKm, (c.rentProv || c.kmEst || !w.e) ? "jah" : "ei"]); });
+  } else if (kind === "income"){
+    name = "tulud";
+    rows = [["Kuupäev", "Algus", "Lõpp", "Kestus h", "Allikas", "Summa €", "Odomeeter"]];
+    workdaysSorted().forEach(function(w){ (w.periods || []).forEach(function(p){ var hrs = periodHours(w, p); (p.lines || []).forEach(function(l){ rows.push([dmy(p.s), hm(p.s), hm(p.e), hrs, l.src, l.amt, p.odo]); }); }); });
+  } else if (kind === "fuel"){
+    name = "tankimised";
+    rows = [["Kuupäev", "Kell", "Kütus", "Kogus", "Ühik", "Summa €", "Hind €/ühik", "Odomeeter", "Täispaak", "Tankla"]];
+    Object.values(S.fuel).sort(function(a, b){ return a.t - b.t; }).forEach(function(f){ rows.push([dmy(f.t), hm(f.t), fuelType(f), f.l, fuelUnit(fuelType(f)), f.sum, f.price || f.sum / f.l, f.odo, f.full ? "jah" : "ei", f.station || ""]); });
+  } else if (kind === "expenses"){
+    name = "kulud";
+    rows = [["Kuupäev", "Kell", "Kategooria", "Summa €", "Makstud telefoniga", "Märkus"]];
+    Object.values(S.expenses).sort(function(a, b){ return a.t - b.t; }).forEach(function(x){ rows.push([dmy(x.t), hm(x.t), x.cat, x.amt, x.cat === "Parkimine" ? (x.phone ? "jah" : "ei") : "", x.note || ""]); });
+  } else {
+    name = "syndmused";
+    rows = [["Kuupäev", "Algus", "Lõpp", "Märgendid", "Märkus"]];
+    Object.values(S.events).sort(function(a, b){ return a.date.localeCompare(b.date); }).forEach(function(e){ rows.push([e.date.split("-").reverse().join("."), e.s, e.e, (e.tags || []).join(", "), e.text]); });
+  }
+  downloads.save({ filename: "driver-profit-" + name + "-" + dateKey(now()) + ".csv", data: csv(rows) }).then(function(){ toast("Fail salvestatud"); }, function(e){ if (e && e.code !== "declined") toast("Faili ei saanud salvestada"); });
+}
+
+// ---------- Sündmuste juhtimine ----------
+$("#app").addEventListener("click", function(ev){
+  var b = ev.target.closest("[data-act]"); if (!b) return;
+  var a = b.dataset.act, w = activeWorkday();
+  if (a === "start") sheetStart();
+  else if (a === "end" && w) sheetEnd(w);
+  else if (a === "pause" && w) togglePause(w);
+  else if (a === "income" && w) sheetIncome(w);
+  else if (a === "fuel") sheetFuel();
+  else if (a === "expense") sheetExpense();
+  else if (a === "event") sheetEvent();
+  else if (a === "editperiod") sheetIncome(S.workdays[b.dataset.w], b.dataset.p);
+  else if (a === "report") sheetReport(b.dataset.w);
+  else if (a === "week") sheetWeek(+b.dataset.m);
+  else if (a === "mdetail") sheetMonthDetail();
+  else if (a === "editevent") sheetEvent(b.dataset.id);
+  else if (a === "editfuel") sheetFuel(b.dataset.id);
+  else if (a === "editexpense") sheetExpense(b.dataset.id);
+  else if (a === "newterms") sheetTerms();
+  else if (a === "rczip") exportReceipts(histY, histM);
+  else if (a === "voice") sheetVoice();
+  else if (a === "rprev"){ revM = addDays(revM, -7); revErr = null; render(); }
+  else if (a === "rnext"){ if (revM < mondayOf(now())){ revM = addDays(revM, 7); revErr = null; render(); } }
+  else if (a === "rmake") makeReview(revM);
+  else if (a === "revgo"){ revM = addDays(mondayOf(now()), -7); tab = "history"; window.scrollTo(0, 0); makeReview(revM); render(); }
+  else if (a === "goalset"){ tab = "settings"; render(); setTimeout(function(){ var g = $("#s-goal"); if (g){ g.scrollIntoView({ block: "center" }); g.focus(); } }, 50); }
+  else if (a === "mprev"){ histM--; if (histM < 0){ histM = 11; histY--; } render(); }
+  else if (a === "mnext"){ histM++; if (histM > 11){ histM = 0; histY++; } render(); }
+});
+$$("nav.tabs button").forEach(function(b){ b.onclick = function(){ tab = b.dataset.tab; window.scrollTo(0, 0); render(); }; });
+document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+setInterval(function(){ if (tab === "today" && activeWorkday()) render(); }, 30000);
+window.addEventListener("online", flush);
+document.addEventListener("visibilitychange", function(){ if (!document.hidden){ render(); flush(); if (uid && Date.now() - lastPull > 20000) pull(); } });
+
+// ---------- Konto ja sisselogimine ----------
+function accountHtml(){
+  if (!uid) return "";
+  return '<div class="sec"><h2>Konto</h2><div class="list" style="padding:12px 14px">' +
+    '<p class="hint" style="margin-top:0">Sisse logitud: <b>' + esc(userEmail || "") + '</b></p>' +
+    (needPw ? '<div class="warnbox">Määra parool, et saaksid ka kodukuvalt avatud äpis sisse logida.</div>' : "") +
+    '<label class="fld"><span>' + (needPw ? "Uus parool" : "Muuda parooli") + ' (vähemalt 8 märki)</span><input id="a-pw" type="password" autocomplete="new-password"></label>' +
+    '<button class="btn full" id="a-pwsave">Salvesta parool</button><div class="err" id="a-pwerr"></div>' +
+    '<button class="btn danger full" id="a-out" style="margin-top:6px">Logi välja</button>' +
+  '</div></div>';
+}
+function mountAccount(){
+  var ps = $("#a-pwsave"), out = $("#a-out");
+  if (ps) ps.onclick = function(){
+    var v = $("#a-pw").value, er = $("#a-pwerr");
+    if (!v || v.length < 8){ er.textContent = "Parool peab olema vähemalt 8 märki."; return; }
+    ps.disabled = true; er.textContent = "";
+    sb.auth.updateUser({ password: v }).then(function(r){
+      ps.disabled = false;
+      if (r.error){ er.textContent = /weak|pwned|leaked/i.test(r.error.message) ? "Liiga nõrk või lekkinud parool. Vali teine." : "Parooli ei saanud salvestada. Proovi uuesti."; return; }
+      needPw = false; toast("Parool salvestatud"); render();
+    });
+  };
+  if (out){
+    var armed = false;
+    out.onclick = function(){
+      if (!armed){ armed = true; out.classList.add("armed"); out.textContent = outbox.length ? "Saatmata kirjed kaovad! Vajuta uuesti" : "Vajuta uuesti väljalogimiseks"; setTimeout(function(){ armed = false; out.classList.remove("armed"); out.textContent = "Logi välja"; }, 4000); return; }
+      sb.auth.signOut().finally(function(){ clearLocal(); location.reload(); });
+    };
+  }
+}
+function clearLocal(){ try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(OUT_KEY); localStorage.removeItem(OWNER_KEY); } catch (e){} }
+var authView = "pw", authMsg = "", authBusy = false;
+function showAuth(){
+  var el = $("#auth"); el.hidden = false;
+  var redirect = location.origin + location.pathname;
+  el.innerHTML = '<div class="box">' +
+    '<div class="hero" style="margin-bottom:16px"><div class="state">Driver Profit</div><div class="big" style="font-size:2.4rem">Logi sisse</div><div class="cap">Sinu andmed on nähtavad ainult sulle.</div></div>' +
+    (authView === "pw"
+      ? '<form id="af"><label class="fld"><span>E-post</span><input id="ae" type="email" autocomplete="email" required></label>' +
+        '<label class="fld"><span>Parool</span><input id="ap" type="password" autocomplete="current-password" required></label>' +
+        '<button class="btn primary big" type="submit"' + (authBusy ? " disabled" : "") + '>Logi sisse</button></form>' +
+        '<button class="linkbtn" id="al">Pole parooli või unustasid? Saada sisselogimislink</button>'
+      : '<form id="af"><label class="fld"><span>E-post</span><input id="ae" type="email" autocomplete="email" required></label>' +
+        '<button class="btn primary big" type="submit"' + (authBusy ? " disabled" : "") + '>Saada link meilile</button></form>' +
+        '<p class="hint">Ava link selles samas brauseris. Pärast sisselogimist määra Seadetes parool.</p>' +
+        '<button class="linkbtn" id="al">Tagasi parooliga sisselogimisele</button>') +
+    (authMsg ? '<div class="okbox">' + esc(authMsg) + '</div>' : "") +
+  '</div>';
+  var lastEmail = ""; try { lastEmail = localStorage.getItem("dp_email") || ""; } catch (e){}
+  $("#ae").value = lastEmail;
+  $("#al").onclick = function(){ authView = authView === "pw" ? "link" : "pw"; authMsg = ""; showAuth(); };
+  $("#af").onsubmit = function(ev){
+    ev.preventDefault();
+    var email = $("#ae").value.trim();
+    try { localStorage.setItem("dp_email", email); } catch (e){}
+    authBusy = true; authMsg = "";
+    var p = authView === "pw"
+      ? sb.auth.signInWithPassword({ email: email, password: $("#ap").value })
+      : sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: false, emailRedirectTo: redirect } });
+    showAuth();
+    p.then(function(r){
+      authBusy = false;
+      if (r.error){
+        var m = String(r.error.message || "");
+        authMsg = /invalid login/i.test(m) ? "Vale e-post või parool." : /rate|seconds|security purposes/i.test(m) ? "Liiga palju katseid. Oota natuke ja proovi uuesti." : /signups not allowed|not found|not allowed/i.test(m) ? "Selle e-postiga kontot pole." : !navigator.onLine ? "Pole internetti." : "Midagi läks valesti. Proovi uuesti.";
+      } else if (authView === "link"){ authMsg = "Link saadeti aadressile " + email + ". Ava see sellel seadmel."; }
+      showAuth();
+    }, function(){ authBusy = false; authMsg = "Pole internetti."; showAuth(); });
+  };
+}
+function hideAuth(){ var el = $("#auth"); el.hidden = true; el.innerHTML = ""; }
+function startSession(session, fromLink){
+  if (!session || !session.user) return;
+  if (uid === session.user.id){ userEmail = session.user.email; return; }
+  var owner = null; try { owner = localStorage.getItem(OWNER_KEY); } catch (e){}
+  if (owner && owner !== session.user.id){
+    // Teine kasutaja samas seadmes: ära näita eelmise andmeid
+    COLS.forEach(function(c){ S[c] = {}; }); S.settings = null; outbox = [];
+  }
+  try { localStorage.setItem(OWNER_KEY, session.user.id); } catch (e){}
+  uid = session.user.id; userEmail = session.user.email; mode = "sync";
+  assets = assetsApi; sampleFn = aiApi; sampleImg = true;
+  if (fromLink) needPw = true;
+  hideAuth();
+  if (/access_token|type=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+  persist(); render(); flush(); pull();
+  if (fromLink) setTimeout(function(){ toast("Määra Seadetes parool"); }, 600);
+}
+render();
+(function init(){
+  downloads = downloadsApi;
+  if (!sb){ mode = "local"; renderSync(); return; }
+  var fromLink = /type=(magiclink|recovery|signup|invite)/.test(location.hash);
+  sb.auth.onAuthStateChange(function(ev, session){
+    if (ev === "SIGNED_IN" || ev === "INITIAL_SESSION" || ev === "TOKEN_REFRESHED"){ if (session) startSession(session, fromLink); }
+    if (ev === "PASSWORD_RECOVERY") needPw = true;
+    if (ev === "SIGNED_OUT" && uid){ clearLocal(); location.reload(); }
+  });
+  sb.auth.getSession().then(function(r){
+    var ses = r && r.data && r.data.session;
+    if (ses) startSession(ses, fromLink); else if (!uid) showAuth();
+  }, function(){ if (!uid) showAuth(); });
+  setInterval(function(){ if (!document.hidden && uid && Date.now() - lastPull > 120000) pull(); }, 30000);
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function(){});
+})();
+})();
+</script>
+</body>
+</html>
