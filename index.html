@@ -1948,6 +1948,7 @@ function mountAccount(){
 function clearLocal(){ try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(OUT_KEY); localStorage.removeItem(OWNER_KEY); } catch (e){} }
 var authView = "pw", authMsg = "", authBusy = false;
 function showAuth(){
+  if (uid){ hideAuth(); return; }
   var el = $("#auth"); el.hidden = false;
   var redirect = location.origin + location.pathname;
   el.innerHTML = '<div class="box">' +
@@ -1981,6 +1982,7 @@ function showAuth(){
         var m = String(r.error.message || "");
         authMsg = /invalid login/i.test(m) ? "Vale e-post või parool." : /rate|seconds|security purposes/i.test(m) ? "Liiga palju katseid. Oota natuke ja proovi uuesti." : /signups not allowed|not found|not allowed/i.test(m) ? "Selle e-postiga kontot pole." : !navigator.onLine ? "Pole internetti." : "Midagi läks valesti. Proovi uuesti.";
       } else if (authView === "link"){ authMsg = "Link saadeti aadressile " + email + ". Ava see sellel seadmel."; }
+      else if (r.data && r.data.session){ startSession(r.data.session, false); return; }
       showAuth();
     }, function(){ authBusy = false; authMsg = "Pole internetti."; showAuth(); });
   };
